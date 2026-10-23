@@ -64,6 +64,14 @@ in the client; Row Level Security in the database controls access.
   upserted when there's signal, so retries are safe. Owners see visits
   the farrier shares (`shared_with_owner`). The visit's `next_due_date`
   feeds the due list.
+- **Invoicing:** farriers keep a price list (`provider_services`, matched
+  to a visit's `work_type`), a per-stop trip fee
+  (`profiles.trip_fee_cents`) and sales taxes (`tax_rates`, with GST/HST/
+  PST presets by province). An invoice built from an appointment gets a
+  line per horse plus the trip fee. Subtotal, tax and totals are worked
+  out by database triggers from the lines. Sending sets a due date and
+  opens the share sheet with the invoice as text. Cash/cheque/other
+  payments go in `payments`; triggers keep paid amounts and status.
 
 ## MVP build order
 
@@ -72,5 +80,5 @@ in the client; Row Level Security in the database controls access.
 3. Booking with arrival windows ✅
 4. Day route ✅
 5. Visit record with per-foot entries (offline) ✅
-6. Invoice at the visit (Stripe)
+6. Invoice at the visit (cash/cheque ✅, Stripe cards next)
 7. Reminders

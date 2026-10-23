@@ -138,6 +138,14 @@ export default function AppointmentScreen() {
         />
       ) : null}
 
+      {isFarrier && !cancelled && !editing ? (
+        <Button
+          title="Create invoice"
+          variant={appt.status === 'completed' ? 'primary' : 'secondary'}
+          onPress={() => router.push({ pathname: '/invoice/new', params: { appointmentId: appt.id } })}
+        />
+      ) : null}
+
       {isFarrier && appt.status === 'scheduled' && !editing ? (
         <>
           <Button

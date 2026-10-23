@@ -109,6 +109,11 @@ export default function ClientScreen() {
             variant="secondary"
             onPress={() => router.push({ pathname: '/horse/new', params: { clientId: id } })}
           />
+          <Button
+            title="New invoice"
+            variant="secondary"
+            onPress={() => router.push({ pathname: '/invoice/new', params: { clientId: id } })}
+          />
           <SectionTitle>App access</SectionTitle>
           {linked ? (
             <ThemedText themeColor="textSecondary">
