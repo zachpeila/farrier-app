@@ -7,6 +7,7 @@ import { Spacing } from '@/constants/theme';
 import { useQuery } from '@/hooks/use-query';
 import { useAuth } from '@/lib/auth';
 import { centsToInput, formatMoney, parseMoney } from '@/lib/money';
+import { openCardSetup } from '@/lib/payments';
 import { fetchBillingSettings } from '@/lib/queries';
 import { errorMessage, supabase } from '@/lib/supabase';
 import { CA_TAX_PRESETS, formatRate } from '@/lib/tax-presets';
@@ -47,6 +48,30 @@ export default function BillingSettings() {
   return (
     <Screen>
       <ErrorText>{loadError ?? error}</ErrorText>
+
+      <SectionTitle>Card payments</SectionTitle>
+      <ThemedText type="small" themeColor="textSecondary">
+        {profile?.stripe_charges_enabled
+          ? 'Clients can pay your invoices by card. Money goes to your Stripe account.'
+          : 'Let clients pay invoices by card. Stripe asks for your details and bank account; payouts go straight to you.'}
+      </ThemedText>
+      <Button
+        title={profile?.stripe_charges_enabled ? 'Open Stripe dashboard' : 'Set up card payments'}
+        variant={profile?.stripe_charges_enabled ? 'secondary' : 'primary'}
+        loading={busy}
+        onPress={async () => {
+          setBusy(true);
+          setError(null);
+          try {
+            await openCardSetup();
+            await refreshProfile();
+          } catch (e) {
+            setError(errorMessage(e));
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
 
       <SectionTitle>Trip fee</SectionTitle>
       <Field

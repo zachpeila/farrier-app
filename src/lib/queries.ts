@@ -216,7 +216,7 @@ export async function fetchInvoice(id: string) {
     .from('invoices')
     .select(
       `*, clients(id, full_name, email, phone),
-       profiles!invoices_provider_id_fkey(full_name, business_name, phone, email),
+       profiles!invoices_provider_id_fkey(full_name, business_name, phone, email, stripe_charges_enabled),
        invoice_line_items(*), payments(id, amount_cents, method, status, paid_at)`,
     )
     .eq('id', id)
