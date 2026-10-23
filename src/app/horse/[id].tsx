@@ -74,6 +74,21 @@ export default function HorseScreen() {
         />
       ) : null}
 
+      {myLink ? (
+        <Button
+          title="Book a visit"
+          onPress={() =>
+            router.push({
+              pathname: '/appointment/new',
+              params: { horseIds: id, barnId: horse.location_id ?? '' },
+            })
+          }
+        />
+      ) : null}
+      {isOwner && mode === 'owner' && farriers.length > 0 ? (
+        <Button title="Request a visit" onPress={() => router.push({ pathname: '/request/new', params: { horseId: id } })} />
+      ) : null}
+
       <SectionTitle>Farrier</SectionTitle>
       {farriers.map((f) => (
         <Card key={f.id}>

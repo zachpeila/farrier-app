@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Card, EmptyState, ErrorText, Loading, Screen, SectionTitle, Segmented } from '@/components/ui';
@@ -71,9 +71,26 @@ export function DueList() {
 
       {groups.map(([barn, items]) => (
         <View key={barn} style={styles.group}>
-          <SectionTitle>
-            {barn} · {items.length} {items.length === 1 ? 'horse' : 'horses'}
-          </SectionTitle>
+          <View style={styles.row}>
+            <SectionTitle>
+              {barn} · {items.length} {items.length === 1 ? 'horse' : 'horses'}
+            </SectionTitle>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() =>
+                router.push({
+                  pathname: '/appointment/new',
+                  params: {
+                    barnId: items[0].barn?.id ?? '',
+                    horseIds: items.map((d) => d.horse_id).join(','),
+                  },
+                })
+              }>
+              <ThemedText type="smallBold" themeColor="accent">
+                Book stop
+              </ThemedText>
+            </Pressable>
+          </View>
           {items.map((d) => (
             <DueRow key={d.horse_id} item={d} />
           ))}

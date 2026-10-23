@@ -45,12 +45,18 @@ in the client; Row Level Security in the database controls access.
   which also adds the owner to the farrier's clients.
 - Farriers can invite a client onto the app (`client_invites` →
   `accept_client_invite`).
+- **Booking:** a farrier books a stop (`appointments` + `appointment_horses`)
+  at a barn with an arrival window (`scheduled_start`/`scheduled_end`).
+  Owners confirm it (`confirm_appointment`); changing the window clears
+  the confirmation (database trigger). Owners can request a visit
+  (`visit_requests`); the farrier accepts and books it, or declines
+  (`respond_to_visit_request`). Owners cancel with `cancel_visit_request`.
 
 ## MVP build order
 
 1. Horses, barns, clients, owner invite ✅
 2. Due list ✅
-3. Booking with arrival windows
+3. Booking with arrival windows ✅
 4. Day route
 5. Visit record with per-foot entries (offline)
 6. Invoice at the visit (Stripe)
