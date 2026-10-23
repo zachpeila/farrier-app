@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { OutboxBanner } from '@/components/outbox-banner';
 import { ThemedText } from '@/components/themed-text';
 import { Button, Card, EmptyState, ErrorText, Loading, Screen, SectionTitle } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
@@ -55,6 +56,7 @@ export default function Schedule() {
         <Button title="Request a visit" onPress={() => router.push('/request/new')} />
       )}
       <ErrorText>{error}</ErrorText>
+      <OutboxBanner />
 
       {toHandle.length > 0 ? (
         <View style={styles.group}>

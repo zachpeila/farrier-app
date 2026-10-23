@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { OutboxBanner } from '@/components/outbox-banner';
 import { ThemedText } from '@/components/themed-text';
 import { Card, EmptyState, ErrorText, Loading, Screen, SectionTitle, Segmented } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
@@ -58,6 +59,7 @@ export function DueList() {
         onChange={setFilter}
       />
       <ErrorText>{error}</ErrorText>
+      <OutboxBanner />
 
       {data && data.length === 0 ? (
         <EmptyState

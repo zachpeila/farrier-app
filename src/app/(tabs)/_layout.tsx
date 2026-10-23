@@ -42,7 +42,12 @@ export default function TabLayout() {
         name="clients"
         options={{ title: 'Clients', tabBarIcon: icon('people-outline'), href: farrier ? undefined : null }}
       />
-      <Tabs.Screen name="barns" options={{ title: 'Barns', tabBarIcon: icon('home-outline') }} />
+      <Tabs.Screen name="invoices" options={{ title: 'Invoices', tabBarIcon: icon('receipt-outline') }} />
+      {/* Farriers reach barns from Account to keep the tab bar to six. */}
+      <Tabs.Screen
+        name="barns"
+        options={{ title: 'Barns', tabBarIcon: icon('home-outline'), href: farrier ? null : undefined }}
+      />
       <Tabs.Screen name="account" options={{ title: 'Account', tabBarIcon: icon('person-circle-outline') }} />
     </Tabs>
   );

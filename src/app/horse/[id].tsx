@@ -8,7 +8,9 @@ import { useQuery } from '@/hooks/use-query';
 import { useAuth } from '@/lib/auth';
 import { dueLabel, formatDate } from '@/lib/dates';
 import { INTERVAL_OPTIONS, SHOE_OPTIONS } from '@/lib/horse-options';
-import { fetchHorse, fetchMyBarns } from '@/lib/queries';
+import { usePendingVisits } from '@/lib/outbox';
+import { fetchHorse, fetchHorseVisits, fetchMyBarns } from '@/lib/queries';
+import { FLAG_TYPES, label, WORK_TYPES } from '@/lib/visit-options';
 import { errorMessage, supabase } from '@/lib/supabase';
 import type { ShoeStatus } from '@/lib/types';
 
@@ -21,7 +23,7 @@ export default function HorseScreen() {
 
   const { data, error: loadError, loading, refetch } = useQuery(
     async () => {
-      const [horse, barns, due, invites] = await Promise.all([
+      const [horse, barns, due, invites, visits] = await Promise.all([
         fetchHorse(id),
         fetchMyBarns(userId),
         supabase.from('due_horses').select('*').eq('horse_id', id),
@@ -31,10 +33,11 @@ export default function HorseScreen() {
           .eq('horse_id', id)
           .is('accepted_at', null)
           .gt('expires_at', new Date().toISOString()),
+        fetchHorseVisits(id),
       ]);
       if (due.error) throw due.error;
       if (invites.error) throw invites.error;
-      return { horse, barns, due: due.data, invites: invites.data };
+      return { horse, barns, due: due.data, invites: invites.data, visits };
     },
     `${id}:${userId}`,
   );
@@ -76,6 +79,18 @@ export default function HorseScreen() {
 
       {myLink ? (
         <Button
+          title="Log a visit"
+          onPress={() =>
+            router.push({
+              pathname: '/visit/new',
+              params: { horseId: id, horseName: horse.name, interval: String(myLink.interval_weeks ?? '') },
+            })
+          }
+        />
+      ) : null}
+      {myLink ? (
+        <Button
+          variant="secondary"
           title="Book a visit"
           onPress={() =>
             router.push({
@@ -137,9 +152,62 @@ export default function HorseScreen() {
         </>
       ) : null}
 
+      <SectionTitle>History</SectionTitle>
+      <VisitHistory horseId={id} visits={data.visits} />
+
       <SectionTitle>Details</SectionTitle>
       <HorseDetailsForm key={horse.updated_at} horse={horse} barns={data.barns} onSaved={refetch} />
     </Screen>
+  );
+}
+
+function VisitHistory({
+  horseId,
+  visits,
+}: {
+  horseId: string;
+  visits: Awaited<ReturnType<typeof fetchHorseVisits>>;
+}) {
+  const { items: pending } = usePendingVisits();
+  const waiting = pending.filter((p) => p.visit.horse_id === horseId);
+  const rows = [
+    ...waiting.map((p) => ({
+      id: p.visit.id,
+      date: p.visit.visit_date,
+      work: p.visit.work_type ?? null,
+      flags: p.flags.map((f) => f.flag_type),
+      by: null as string | null,
+      note: 'Waiting to upload',
+    })),
+    ...visits
+      .filter((v) => !waiting.some((p) => p.visit.id === v.id))
+      .map((v) => ({
+        id: v.id,
+        date: v.visit_date,
+        work: v.work_type,
+        flags: v.visit_flags.map((f) => f.flag_type),
+        by: v.profiles?.business_name || v.profiles?.full_name || null,
+        note: v.visit_photos.length ? `${v.visit_photos.length} photos` : null,
+      })),
+  ].sort((a, b) => b.date.localeCompare(a.date));
+
+  if (rows.length === 0) return <ThemedText themeColor="textSecondary">No visits recorded yet.</ThemedText>;
+
+  return (
+    <View style={{ gap: 8 }}>
+      {rows.map((r) => (
+        <Card key={r.id} onPress={() => router.push({ pathname: '/visit/[id]', params: { id: r.id } })}>
+          <ThemedText style={{ fontWeight: 600 }}>
+            {formatDate(r.date)} · {label(WORK_TYPES, r.work) || 'Visit'}
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {[r.by, r.flags.length ? r.flags.map((f) => label(FLAG_TYPES, f)).join(', ') : null, r.note]
+              .filter(Boolean)
+              .join(' · ')}
+          </ThemedText>
+        </Card>
+      ))}
+    </View>
   );
 }
 
