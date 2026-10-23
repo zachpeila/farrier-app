@@ -24,6 +24,13 @@ in the client; Row Level Security in the database controls access.
 - **Invite links:** add `farrierapp://**` to Authentication > URL
   Configuration > Redirect URLs (only needed once links open the app).
 
+## Server code
+
+- `supabase/functions/` Edge Functions (Deno). Deploy with
+  `supabase functions deploy <name>`.
+- `supabase/migrations/` SQL to apply by hand or with the Supabase CLI;
+  each file says what it needs first.
+
 ## Layout
 
 - `src/app/` routes (Expo Router). `(tabs)/` is the main tab bar.
@@ -72,6 +79,13 @@ in the client; Row Level Security in the database controls access.
   out by database triggers from the lines. Sending sets a due date and
   opens the share sheet with the invoice as text. Cash/cheque/other
   payments go in `payments`; triggers keep paid amounts and status.
+- **Reminders:** the app saves each phone's Expo push token
+  (`push_tokens`; needs an EAS project id in app config). The
+  `send-reminders` Edge Function runs daily from pg_cron and sends: a
+  weekly due-soon digest to farriers, a due-soon nudge to owners, "confirm
+  this visit" and "visit tomorrow" to owners, and past-due invoice
+  reminders. Every send is logged in `notifications`, which is also how
+  repeats are avoided. Tapping a reminder opens the horse, visit or invoice.
 
 ## MVP build order
 
@@ -81,4 +95,4 @@ in the client; Row Level Security in the database controls access.
 4. Day route ✅
 5. Visit record with per-foot entries (offline) ✅
 6. Invoice at the visit (cash/cheque ✅, Stripe cards next)
-7. Reminders
+7. Reminders (push) ✅

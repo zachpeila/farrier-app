@@ -5,6 +5,7 @@ import { useColorScheme } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { syncOutbox } from '@/lib/outbox';
+import { registerForPush, useNotificationRouting } from '@/lib/push';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -19,6 +20,13 @@ function RootStack() {
   useEffect(() => {
     if (session) syncOutbox();
   }, [session]);
+
+  // Register this phone for reminders once someone has finished setup.
+  const userId = session?.user.id;
+  useEffect(() => {
+    if (userId && mode) registerForPush(userId).catch(() => {});
+  }, [userId, mode]);
+  useNotificationRouting();
 
   if (loading) return null;
 
