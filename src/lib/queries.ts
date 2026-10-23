@@ -148,3 +148,83 @@ export async function fetchDayStops(userId: string, day: Date) {
   return data;
 }
 export type DayStop = Awaited<ReturnType<typeof fetchDayStops>>[number];
+
+/** A horse's visit history the person is allowed to see, newest first. */
+export async function fetchHorseVisits(horseId: string) {
+  const { data, error } = await supabase
+    .from('visits')
+    .select(
+      `id, visit_date, visit_type, work_type, is_flagged, shared_with_owner, provider_id,
+       visit_flags(flag_type), visit_photos(id),
+       profiles!visits_provider_id_fkey(full_name, business_name)`,
+    )
+    .eq('horse_id', horseId)
+    .order('visit_date', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchVisit(id: string) {
+  const { data, error } = await supabase
+    .from('visits')
+    .select(
+      `*, horses(id, name), visit_feet(*), visit_flags(*), visit_photos(*),
+       profiles!visits_provider_id_fkey(full_name, business_name)`,
+    )
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const paths = data.visit_photos.map((p) => p.storage_path);
+  const signed = paths.length
+    ? (await supabase.storage.from('visit-photos').createSignedUrls(paths, 60 * 60)).data ?? []
+    : [];
+  const urlByPath = new Map(signed.map((s) => [s.path, s.signedUrl]));
+  return {
+    ...data,
+    visit_photos: data.visit_photos.map((p) => ({ ...p, url: urlByPath.get(p.storage_path) ?? null })),
+  };
+}
+
+export async function fetchBillingSettings(userId: string) {
+  const [services, taxes] = await Promise.all([
+    supabase.from('provider_services').select('*').eq('provider_id', userId).order('sort_order').order('name'),
+    supabase.from('tax_rates').select('*').eq('provider_id', userId).order('sort_order').order('name'),
+  ]);
+  if (services.error) throw services.error;
+  if (taxes.error) throw taxes.error;
+  return { services: services.data, taxes: taxes.data };
+}
+
+const INVOICE_LIST_SELECT = `id, invoice_number, status, total_cents, amount_paid_cents, currency, due_date,
+  created_at, provider_id, clients(id, full_name),
+  profiles!invoices_provider_id_fkey(full_name, business_name)`;
+
+export async function fetchInvoices() {
+  const { data, error } = await supabase
+    .from('invoices')
+    .select(INVOICE_LIST_SELECT)
+    .order('created_at', { ascending: false })
+    .limit(200);
+  if (error) throw error;
+  return data;
+}
+export type InvoiceListItem = Awaited<ReturnType<typeof fetchInvoices>>[number];
+
+export async function fetchInvoice(id: string) {
+  const { data, error } = await supabase
+    .from('invoices')
+    .select(
+      `*, clients(id, full_name, email, phone),
+       profiles!invoices_provider_id_fkey(full_name, business_name, phone, email, stripe_charges_enabled),
+       invoice_line_items(*), payments(id, amount_cents, method, status, paid_at)`,
+    )
+    .eq('id', id)
+    .single();
+  if (error) throw error;
+  return {
+    ...data,
+    invoice_line_items: [...data.invoice_line_items].sort((a, b) => a.sort_order - b.sort_order),
+  };
+}
+export type InvoiceDetail = Awaited<ReturnType<typeof fetchInvoice>>;

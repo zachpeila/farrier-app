@@ -24,6 +24,13 @@ in the client; Row Level Security in the database controls access.
 - **Invite links:** add `farrierapp://**` to Authentication > URL
   Configuration > Redirect URLs (only needed once links open the app).
 
+## Server code
+
+- `supabase/functions/` Edge Functions (Deno). Deploy with
+  `supabase functions deploy <name>`.
+- `supabase/migrations/` SQL to apply by hand or with the Supabase CLI;
+  each file says what it needs first.
+
 ## Layout
 
 - `src/app/` routes (Expo Router). `(tabs)/` is the main tab bar.
@@ -56,6 +63,40 @@ in the client; Row Level Security in the database controls access.
   day's stops (`appointments.route_order`), estimates driving distance
   between pinned barns (straight line × 1.3, saved as `planned_km`, shown
   in mi or km), and opens the whole day in Google Maps. No maps API key.
+- **Visit records (offline first):** a farrier logs a visit per horse
+  (`visits`, `visit_feet` per foot, `visit_flags`, `visit_photos` in the
+  `visit-photos` bucket at `<horse>/<visit>/<photo>.jpg`). The visit is
+  saved on the phone first (`src/lib/outbox.ts`, AsyncStorage + photos
+  copied to the documents folder) with ids made on the phone, then
+  upserted when there's signal, so retries are safe. Owners see visits
+  the farrier shares (`shared_with_owner`). The visit's `next_due_date`
+  feeds the due list.
+- **Invoicing:** farriers keep a price list (`provider_services`, matched
+  to a visit's `work_type`), a per-stop trip fee
+  (`profiles.trip_fee_cents`) and sales taxes (`tax_rates`, with GST/HST/
+  PST presets by province). An invoice built from an appointment gets a
+  line per horse plus the trip fee. Subtotal, tax and totals are worked
+  out by database triggers from the lines. Sending sets a due date and
+  opens the share sheet with the invoice as text. Cash/cheque/other
+  payments go in `payments`; triggers keep paid amounts and status.
+- **Card payments (Stripe Connect Express):** `stripe-connect` creates the
+  farrier's Express account and returns an onboarding or dashboard link.
+  `invoice-checkout` makes a Checkout page for what's owing; the money is a
+  destination charge to the farrier (`PLATFORM_FEE_BP` sets an optional
+  platform fee, default 0). `stripe-webhook` records the card payment in
+  `payments` (triggers mark the invoice paid) and keeps
+  `profiles.stripe_charges_enabled` current. Each Stripe event is stored
+  once in `stripe_webhook_events`. Secrets: `STRIPE_SECRET_KEY`,
+  `STRIPE_WEBHOOK_SECRET`. Webhook events to send:
+  `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
+  `account.updated` (enable "Connected accounts" events too).
+- **Reminders:** the app saves each phone's Expo push token
+  (`push_tokens`; needs an EAS project id in app config). The
+  `send-reminders` Edge Function runs daily from pg_cron and sends: a
+  weekly due-soon digest to farriers, a due-soon nudge to owners, "confirm
+  this visit" and "visit tomorrow" to owners, and past-due invoice
+  reminders. Every send is logged in `notifications`, which is also how
+  repeats are avoided. Tapping a reminder opens the horse, visit or invoice.
 
 ## MVP build order
 
@@ -63,6 +104,6 @@ in the client; Row Level Security in the database controls access.
 2. Due list ✅
 3. Booking with arrival windows ✅
 4. Day route ✅
-5. Visit record with per-foot entries (offline)
-6. Invoice at the visit (Stripe)
-7. Reminders
+5. Visit record with per-foot entries (offline) ✅
+6. Invoice at the visit (cash/cheque and Stripe cards) ✅
+7. Reminders (push) ✅

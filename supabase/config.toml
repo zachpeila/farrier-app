@@ -1,0 +1,14 @@
+# Only the settings this repo needs; everything else uses Supabase defaults.
+project_id = "bvtwxbcnswkzskyahdfs"
+
+[functions.send-reminders]
+# Called by pg_cron with a shared secret header, not a user's JWT.
+verify_jwt = false
+
+[functions.stripe-webhook]
+# Stripe signs its requests; there's no user JWT.
+verify_jwt = false
+
+[functions.stripe-return]
+# A plain page people land on after Stripe.
+verify_jwt = false
