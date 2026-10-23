@@ -1,6 +1,6 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Linking, View } from 'react-native';
+import { Linking, Pressable, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Button, Card, DateStepper, ErrorText, Loading, Screen, SectionTitle, Segmented } from '@/components/ui';
@@ -56,8 +56,12 @@ export default function AppointmentScreen() {
         </ThemedText>
         <ThemedText
           type="smallBold"
-          style={{ color: cancelled ? theme.danger : appt.owner_confirmed_at ? theme.success : theme.warning }}>
-          {cancelled ? 'Cancelled' : appt.owner_confirmed_at ? 'Confirmed by owner' : 'Waiting for owner to confirm'}
+          style={{ color: cancelled ? theme.danger : appt.status === 'completed' || appt.owner_confirmed_at ? theme.success : theme.warning }}>
+          {cancelled
+            ? 'Cancelled'
+            : appt.status === 'completed'
+              ? 'Done'
+              : appt.owner_confirmed_at ? 'Confirmed by owner' : 'Waiting for owner to confirm'}
         </ThemedText>
       </Card>
 
@@ -85,6 +89,20 @@ export default function AppointmentScreen() {
         {appt.appointment_horses.map((ah) => (
           <Card key={ah.horse_id} onPress={() => router.push({ pathname: '/horse/[id]', params: { id: ah.horse_id } })}>
             <ThemedText style={{ fontWeight: 600 }}>{ah.horses?.name ?? 'Horse'}</ThemedText>
+            {isFarrier && !cancelled ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() =>
+                  router.push({
+                    pathname: '/visit/new',
+                    params: { horseId: ah.horse_id, horseName: ah.horses?.name ?? '', appointmentId: appt.id },
+                  })
+                }>
+                <ThemedText type="smallBold" themeColor="accent">
+                  Log visit
+                </ThemedText>
+              </Pressable>
+            ) : null}
           </Card>
         ))}
       </View>
@@ -120,8 +138,13 @@ export default function AppointmentScreen() {
         />
       ) : null}
 
-      {isFarrier && !cancelled && !editing ? (
+      {isFarrier && appt.status === 'scheduled' && !editing ? (
         <>
+          <Button
+            title="Mark visit done"
+            loading={busy}
+            onPress={() => run(() => supabase.from('appointments').update({ status: 'completed' }).eq('id', id))}
+          />
           <Button title="Change time" variant="secondary" onPress={() => setEditing(true)} />
           <Button
             title="Cancel visit"

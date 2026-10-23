@@ -56,6 +56,14 @@ in the client; Row Level Security in the database controls access.
   day's stops (`appointments.route_order`), estimates driving distance
   between pinned barns (straight line × 1.3, saved as `planned_km`, shown
   in mi or km), and opens the whole day in Google Maps. No maps API key.
+- **Visit records (offline first):** a farrier logs a visit per horse
+  (`visits`, `visit_feet` per foot, `visit_flags`, `visit_photos` in the
+  `visit-photos` bucket at `<horse>/<visit>/<photo>.jpg`). The visit is
+  saved on the phone first (`src/lib/outbox.ts`, AsyncStorage + photos
+  copied to the documents folder) with ids made on the phone, then
+  upserted when there's signal, so retries are safe. Owners see visits
+  the farrier shares (`shared_with_owner`). The visit's `next_due_date`
+  feeds the due list.
 
 ## MVP build order
 
@@ -63,6 +71,6 @@ in the client; Row Level Security in the database controls access.
 2. Due list ✅
 3. Booking with arrival windows ✅
 4. Day route ✅
-5. Visit record with per-foot entries (offline)
+5. Visit record with per-foot entries (offline) ✅
 6. Invoice at the visit (Stripe)
 7. Reminders
