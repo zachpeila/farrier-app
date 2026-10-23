@@ -31,6 +31,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="schedule"
+        options={{ title: farrier ? 'Schedule' : 'Visits', tabBarIcon: icon('time-outline') }}
+      />
+      <Tabs.Screen
         name="horses"
         options={{ title: 'Horses', tabBarIcon: icon('list-outline'), href: farrier ? undefined : null }}
       />

@@ -128,6 +128,97 @@ export function Segmented<T extends string>({
   );
 }
 
+/** Like Segmented, but any number of options can be on. */
+export function MultiSelect({
+  label,
+  options,
+  values,
+  onChange,
+}: {
+  label?: string;
+  options: { value: string; label: string }[];
+  values: string[];
+  onChange: (v: string[]) => void;
+}) {
+  const theme = useTheme();
+  return (
+    <View style={styles.field}>
+      {label ? <ThemedText type="smallBold">{label}</ThemedText> : null}
+      <View style={styles.segmented}>
+        {options.map((o) => {
+          const selected = values.includes(o.value);
+          return (
+            <Pressable
+              key={o.value}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: selected }}
+              onPress={() => onChange(selected ? values.filter((v) => v !== o.value) : [...values, o.value])}
+              style={[
+                styles.segment,
+                {
+                  backgroundColor: selected ? theme.accent : theme.backgroundElement,
+                  borderColor: selected ? theme.accent : theme.border,
+                },
+              ]}>
+              <ThemedText type="small" style={{ color: selected ? theme.accentText : theme.text }}>
+                {selected ? '✓ ' : ''}
+                {o.label}
+              </ThemedText>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+/** Pick a day by stepping back and forward; never goes before `min`. */
+export function DateStepper({
+  label,
+  value,
+  onChange,
+  min,
+  format,
+}: {
+  label: string;
+  value: Date;
+  onChange: (d: Date) => void;
+  min?: Date;
+  format: (d: Date) => string;
+}) {
+  const theme = useTheme();
+  const step = (days: number) => {
+    const next = new Date(value);
+    next.setDate(next.getDate() + days);
+    if (min && next < min) return;
+    onChange(next);
+  };
+  const atMin = !!min && value.getTime() - 86_400_000 < min.getTime();
+  return (
+    <View style={styles.field}>
+      <ThemedText type="smallBold">{label}</ThemedText>
+      <View style={[styles.stepper, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Previous day"
+          disabled={atMin}
+          onPress={() => step(-1)}
+          style={[styles.stepButton, atMin && { opacity: 0.3 }]}>
+          <ThemedText type="subtitle">‹</ThemedText>
+        </Pressable>
+        <ThemedText style={{ fontWeight: 600 }}>{format(value)}</ThemedText>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Next day"
+          onPress={() => step(1)}
+          style={styles.stepButton}>
+          <ThemedText type="subtitle">›</ThemedText>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
 export function Card({ children, onPress, style }: { children: ReactNode; onPress?: () => void; style?: ViewStyle }) {
   const theme = useTheme();
   const cardStyle = [styles.card, { backgroundColor: theme.backgroundElement }, style];
@@ -214,6 +305,15 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     justifyContent: 'center',
   },
+  stepper: {
+    minHeight: 48,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  stepButton: { width: 56, height: 48, alignItems: 'center', justifyContent: 'center' },
   card: { borderRadius: 14, padding: Spacing.three, gap: Spacing.one },
   sectionTitle: { textTransform: 'uppercase', letterSpacing: 0.5, marginTop: Spacing.two },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.two, padding: Spacing.four },

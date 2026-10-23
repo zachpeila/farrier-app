@@ -88,3 +88,44 @@ export async function fetchDueList(userId: string) {
   }));
 }
 export type DueItem = Awaited<ReturnType<typeof fetchDueList>>[number];
+
+const APPOINTMENT_SELECT = `*, locations(id, name, address),
+  appointment_horses(horse_id, horses(id, name)),
+  profiles!appointments_provider_id_fkey(full_name, business_name, phone)`;
+
+/** Appointments from today on that the person can see: their own as farrier, or their horses' as owner. */
+export async function fetchUpcomingAppointments() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const { data, error } = await supabase
+    .from('appointments')
+    .select(APPOINTMENT_SELECT)
+    .gte('scheduled_start', today.toISOString())
+    .eq('status', 'scheduled')
+    .order('scheduled_start');
+  if (error) throw error;
+  return data;
+}
+export type AppointmentItem = Awaited<ReturnType<typeof fetchUpcomingAppointments>>[number];
+
+export async function fetchAppointment(id: string) {
+  const { data, error } = await supabase.from('appointments').select(APPOINTMENT_SELECT).eq('id', id).single();
+  if (error) throw error;
+  return data;
+}
+
+/** Visit requests sent to or by the person that still need something to happen. */
+export async function fetchOpenRequests() {
+  const { data, error } = await supabase
+    .from('visit_requests')
+    .select(
+      `*, horses(id, name, location_id, locations(id, name)),
+       requester:profiles!visit_requests_requested_by_fkey(full_name, phone),
+       provider:profiles!visit_requests_requested_provider_id_fkey(full_name, business_name)`,
+    )
+    .in('status', ['pending', 'accepted'])
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+export type RequestItem = Awaited<ReturnType<typeof fetchOpenRequests>>[number];
