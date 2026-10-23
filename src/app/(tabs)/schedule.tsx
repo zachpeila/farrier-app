@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Button, Card, EmptyState, ErrorText, Loading, Screen, SectionTitle } from '@/components/ui';
@@ -15,7 +15,7 @@ import {
   type AppointmentItem,
   type RequestItem,
 } from '@/lib/queries';
-import { formatDay, formatWindow } from '@/lib/schedule';
+import { formatDay, formatWindow, toDateString } from '@/lib/schedule';
 import { errorMessage, supabase } from '@/lib/supabase';
 
 /**
@@ -84,7 +84,23 @@ export default function Schedule() {
 
       {[...byDay].map(([day, items]) => (
         <View key={day} style={styles.group}>
-          <SectionTitle>{day}</SectionTitle>
+          <View style={styles.row}>
+            <SectionTitle>{day}</SectionTitle>
+            {farrier ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() =>
+                  router.push({
+                    pathname: '/route',
+                    params: { date: toDateString(new Date(items[0].scheduled_start)) },
+                  })
+                }>
+                <ThemedText type="smallBold" themeColor="accent">
+                  Day route
+                </ThemedText>
+              </Pressable>
+            ) : null}
+          </View>
           {items.map((a) => (
             <AppointmentCard key={a.id} appt={a} farrier={farrier} />
           ))}
