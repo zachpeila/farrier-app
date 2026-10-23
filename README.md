@@ -51,13 +51,18 @@ in the client; Row Level Security in the database controls access.
   the confirmation (database trigger). Owners can request a visit
   (`visit_requests`); the farrier accepts and books it, or declines
   (`respond_to_visit_request`). Owners cancel with `cancel_visit_request`.
+- **Day route:** barns get a map pin (`locations.latitude/longitude`) from
+  their address or the phone's location. The route screen orders the
+  day's stops (`appointments.route_order`), estimates driving distance
+  between pinned barns (straight line × 1.3, saved as `planned_km`, shown
+  in mi or km), and opens the whole day in Google Maps. No maps API key.
 
 ## MVP build order
 
 1. Horses, barns, clients, owner invite ✅
 2. Due list ✅
 3. Booking with arrival windows ✅
-4. Day route
+4. Day route ✅
 5. Visit record with per-foot entries (offline)
 6. Invoice at the visit (Stripe)
 7. Reminders

@@ -34,6 +34,7 @@ function RootStack() {
         <Stack.Screen name="invite" options={{ title: 'Enter invite code', presentation: 'modal' }} />
         <Stack.Screen name="appointment/new" options={{ title: 'Book a visit', presentation: 'modal' }} />
         <Stack.Screen name="appointment/[id]" options={{ title: 'Visit' }} />
+        <Stack.Screen name="route" options={{ title: 'Day route' }} />
         <Stack.Screen name="request/new" options={{ title: 'Request a visit', presentation: 'modal' }} />
       </Stack.Protected>
     </Stack>

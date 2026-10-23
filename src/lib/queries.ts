@@ -129,3 +129,22 @@ export async function fetchOpenRequests() {
   return data;
 }
 export type RequestItem = Awaited<ReturnType<typeof fetchOpenRequests>>[number];
+
+/** The farrier's stops for one day, in route order (then by arrival window). */
+export async function fetchDayStops(userId: string, day: Date) {
+  const start = new Date(day.getFullYear(), day.getMonth(), day.getDate());
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  const { data, error } = await supabase
+    .from('appointments')
+    .select(`*, locations(id, name, address, latitude, longitude), appointment_horses(horse_id, horses(id, name))`)
+    .eq('provider_id', userId)
+    .eq('status', 'scheduled')
+    .gte('scheduled_start', start.toISOString())
+    .lt('scheduled_start', end.toISOString())
+    .order('route_order', { nullsFirst: false })
+    .order('scheduled_start');
+  if (error) throw error;
+  return data;
+}
+export type DayStop = Awaited<ReturnType<typeof fetchDayStops>>[number];
