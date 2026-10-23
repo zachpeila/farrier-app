@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { syncOutbox } from '@/lib/outbox';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -13,6 +14,11 @@ function RootStack() {
   useEffect(() => {
     if (!loading) SplashScreen.hideAsync();
   }, [loading]);
+
+  // Upload any visits saved while offline as soon as someone is signed in.
+  useEffect(() => {
+    if (session) syncOutbox();
+  }, [session]);
 
   if (loading) return null;
 
@@ -34,6 +40,11 @@ function RootStack() {
         <Stack.Screen name="invite" options={{ title: 'Enter invite code', presentation: 'modal' }} />
         <Stack.Screen name="appointment/new" options={{ title: 'Book a visit', presentation: 'modal' }} />
         <Stack.Screen name="appointment/[id]" options={{ title: 'Visit' }} />
+        <Stack.Screen name="visit/new" options={{ title: 'Log visit', presentation: 'modal' }} />
+        <Stack.Screen name="visit/[id]" options={{ title: 'Visit' }} />
+        <Stack.Screen name="invoice/new" options={{ title: 'New invoice', presentation: 'modal' }} />
+        <Stack.Screen name="invoice/[id]" options={{ title: 'Invoice' }} />
+        <Stack.Screen name="settings/billing" options={{ title: 'Prices and taxes' }} />
         <Stack.Screen name="route" options={{ title: 'Day route' }} />
         <Stack.Screen name="request/new" options={{ title: 'Request a visit', presentation: 'modal' }} />
       </Stack.Protected>

@@ -15,6 +15,14 @@ export default function Account() {
       <SectionTitle>Profile</SectionTitle>
       <ProfileForm key={`${mode}-${profile?.updated_at}`} mode={mode} submitLabel="Save" />
 
+      {mode === 'farrier' ? (
+        <>
+          <SectionTitle>Business</SectionTitle>
+          <Button title="Prices and taxes" variant="secondary" onPress={() => router.push('/settings/billing')} />
+          <Button title="Your barns" variant="secondary" onPress={() => router.push('/barns')} />
+        </>
+      ) : null}
+
       <SectionTitle>Invites</SectionTitle>
       <Button title="Enter an invite code" variant="secondary" onPress={() => router.push('/invite')} />
 
