@@ -45,7 +45,8 @@
           "cameraPermission": "Used to take before and after photos of hooves for the visit record.",
           "photosPermission": "Used to attach hoof photos to a visit record."
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,
