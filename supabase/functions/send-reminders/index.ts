@@ -2,8 +2,10 @@
 // Sends Expo push notifications and logs each one in `notifications`, which
 // is also how it avoids sending the same reminder twice.
 //
-// Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (provided by Supabase),
-//      CRON_SECRET (set with `supabase secrets set CRON_SECRET=...`).
+// Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (provided by Supabase).
+// The cron job sends the vault secret `cron_secret` in the x-cron-secret
+// header, and check_cron_secret() compares it inside the database, so the
+// secret only lives in the vault.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -241,9 +243,10 @@ async function send(reminders: Reminder[]) {
 }
 
 Deno.serve(async (req) => {
-  if (req.headers.get('x-cron-secret') !== Deno.env.get('CRON_SECRET')) {
-    return new Response('forbidden', { status: 403 });
-  }
+  const { data: allowed } = await db.rpc('check_cron_secret', {
+    p_secret: req.headers.get('x-cron-secret') ?? '',
+  });
+  if (allowed !== true) return new Response('forbidden', { status: 403 });
   try {
     const result = await send(await unsent(await collect()));
     return Response.json(result);
