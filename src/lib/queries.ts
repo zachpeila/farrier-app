@@ -148,3 +148,40 @@ export async function fetchDayStops(userId: string, day: Date) {
   return data;
 }
 export type DayStop = Awaited<ReturnType<typeof fetchDayStops>>[number];
+
+/** A horse's visit history the person is allowed to see, newest first. */
+export async function fetchHorseVisits(horseId: string) {
+  const { data, error } = await supabase
+    .from('visits')
+    .select(
+      `id, visit_date, visit_type, work_type, is_flagged, shared_with_owner, provider_id,
+       visit_flags(flag_type), visit_photos(id),
+       profiles!visits_provider_id_fkey(full_name, business_name)`,
+    )
+    .eq('horse_id', horseId)
+    .order('visit_date', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchVisit(id: string) {
+  const { data, error } = await supabase
+    .from('visits')
+    .select(
+      `*, horses(id, name), visit_feet(*), visit_flags(*), visit_photos(*),
+       profiles!visits_provider_id_fkey(full_name, business_name)`,
+    )
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const paths = data.visit_photos.map((p) => p.storage_path);
+  const signed = paths.length
+    ? (await supabase.storage.from('visit-photos').createSignedUrls(paths, 60 * 60)).data ?? []
+    : [];
+  const urlByPath = new Map(signed.map((s) => [s.path, s.signedUrl]));
+  return {
+    ...data,
+    visit_photos: data.visit_photos.map((p) => ({ ...p, url: urlByPath.get(p.storage_path) ?? null })),
+  };
+}
