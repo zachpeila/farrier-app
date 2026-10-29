@@ -87,9 +87,11 @@ in the client; Row Level Security in the database controls access.
   `payments` (triggers mark the invoice paid) and keeps
   `profiles.stripe_charges_enabled` current. Each Stripe event is stored
   once in `stripe_webhook_events`. Secrets: `STRIPE_SECRET_KEY`,
-  `STRIPE_WEBHOOK_SECRET`. Webhook events to send:
-  `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
-  `account.updated` (enable "Connected accounts" events too).
+  `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET`. Two Stripe
+  webhook endpoints point at `stripe-webhook`: a platform one for
+  `checkout.session.completed` and `checkout.session.async_payment_succeeded`
+  (its signing secret is `STRIPE_WEBHOOK_SECRET`), and a Connect one for
+  `account.updated` (`STRIPE_CONNECT_WEBHOOK_SECRET`).
 - **Reminders:** the app saves each phone's Expo push token
   (`push_tokens`; needs an EAS project id in app config). The
   `send-reminders` Edge Function runs daily from pg_cron and sends: a

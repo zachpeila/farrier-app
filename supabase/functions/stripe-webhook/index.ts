@@ -8,21 +8,29 @@ import { admin, stripe } from '../_shared/stripe.ts';
 
 const crypto = Stripe.createSubtleCryptoProvider();
 
+// Two Stripe endpoints post here, each with its own signing secret: the
+// platform one (checkout sessions) and the Connect one (farrier accounts).
+const secrets = [Deno.env.get('STRIPE_WEBHOOK_SECRET'), Deno.env.get('STRIPE_CONNECT_WEBHOOK_SECRET')].filter(
+  (s): s is string => !!s,
+);
+
+async function verify(body: string, signature: string | null): Promise<Stripe.Event | null> {
+  if (!signature) return null;
+  for (const secret of secrets) {
+    try {
+      return await stripe.webhooks.constructEventAsync(body, signature, secret, undefined, crypto);
+    } catch {
+      // Try the next secret.
+    }
+  }
+  return null;
+}
+
 Deno.serve(async (req) => {
   const signature = req.headers.get('Stripe-Signature');
   const body = await req.text();
-  let event: Stripe.Event;
-  try {
-    event = await stripe.webhooks.constructEventAsync(
-      body,
-      signature!,
-      Deno.env.get('STRIPE_WEBHOOK_SECRET')!,
-      undefined,
-      crypto,
-    );
-  } catch {
-    return new Response('bad signature', { status: 400 });
-  }
+  const event = await verify(body, signature);
+  if (!event) return new Response('bad signature', { status: 400 });
 
   // Claim the event first; a duplicate insert means it was already handled.
   const { error: dup } = await admin
