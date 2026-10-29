@@ -11,6 +11,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { formatDate } from '@/lib/dates';
 import { centsToInput, formatMoney, INVOICE_STATUS_LABELS as STATUS_LABELS, parseMoney } from '@/lib/money';
+import { payInvoiceByCard } from '@/lib/payments';
 import { fetchInvoice, type InvoiceDetail } from '@/lib/queries';
 import { addDays, toDateString } from '@/lib/schedule';
 import { errorMessage, supabase } from '@/lib/supabase';
@@ -76,6 +77,22 @@ export default function InvoiceScreen() {
     else {
       after?.();
       refetch();
+    }
+  }
+
+  const takesCards = !!inv.profiles?.stripe_charges_enabled;
+
+  async function payByCard() {
+    setBusy(true);
+    setError(null);
+    try {
+      await payInvoiceByCard(id);
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(false);
+      // The webhook records the payment; give it a moment, then reload.
+      setTimeout(refetch, 2000);
     }
   }
 
@@ -237,6 +254,9 @@ export default function InvoiceScreen() {
       {isFarrier && open && !paying ? (
         <>
           <Button title="Record a payment" onPress={() => setPaying(true)} />
+          {takesCards ? (
+            <Button title="Take card payment now" variant="secondary" loading={busy} onPress={payByCard} />
+          ) : null}
           <Button
             title="Share invoice again"
             variant="secondary"
@@ -271,9 +291,12 @@ export default function InvoiceScreen() {
         />
       ) : null}
 
-      {!isFarrier && open ? (
+      {!isFarrier && open && takesCards ? (
+        <Button title={`Pay ${formatMoney(balance, inv.currency)} by card`} loading={busy} onPress={payByCard} />
+      ) : null}
+      {!isFarrier && open && !takesCards ? (
         <ThemedText type="small" themeColor="textSecondary">
-          Card payments in the app are coming soon. For now, pay your farrier the way you usually do.
+          Your farrier doesn&apos;t take card payments in the app yet. Pay them the way you usually do.
         </ThemedText>
       ) : null}
     </Screen>

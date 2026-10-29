@@ -79,6 +79,17 @@ in the client; Row Level Security in the database controls access.
   out by database triggers from the lines. Sending sets a due date and
   opens the share sheet with the invoice as text. Cash/cheque/other
   payments go in `payments`; triggers keep paid amounts and status.
+- **Card payments (Stripe Connect Express):** `stripe-connect` creates the
+  farrier's Express account and returns an onboarding or dashboard link.
+  `invoice-checkout` makes a Checkout page for what's owing; the money is a
+  destination charge to the farrier (`PLATFORM_FEE_BP` sets an optional
+  platform fee, default 0). `stripe-webhook` records the card payment in
+  `payments` (triggers mark the invoice paid) and keeps
+  `profiles.stripe_charges_enabled` current. Each Stripe event is stored
+  once in `stripe_webhook_events`. Secrets: `STRIPE_SECRET_KEY`,
+  `STRIPE_WEBHOOK_SECRET`. Webhook events to send:
+  `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
+  `account.updated` (enable "Connected accounts" events too).
 - **Reminders:** the app saves each phone's Expo push token
   (`push_tokens`; needs an EAS project id in app config). The
   `send-reminders` Edge Function runs daily from pg_cron and sends: a
@@ -94,5 +105,5 @@ in the client; Row Level Security in the database controls access.
 3. Booking with arrival windows ✅
 4. Day route ✅
 5. Visit record with per-foot entries (offline) ✅
-6. Invoice at the visit (cash/cheque ✅, Stripe cards next)
+6. Invoice at the visit (cash/cheque and Stripe cards) ✅
 7. Reminders (push) ✅
