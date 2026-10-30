@@ -15,7 +15,8 @@ export const supabase = createClient<Database>(url, key, {
     storage: Platform.OS === 'web' ? undefined : AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    // On web the sign-in email can carry a link back to the site instead of a code.
+    detectSessionInUrl: Platform.OS === 'web',
   },
 });
 

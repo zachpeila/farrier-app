@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Button, ErrorText, Field, Screen } from '@/components/ui';
@@ -20,7 +20,9 @@ export default function SignIn() {
   async function sendCode() {
     setBusy(true);
     setError(null);
-    const { error } = await supabase.auth.signInWithOtp({ email: email.trim() });
+    // On web, a sign-in link in the email brings the person back to this site.
+    const emailRedirectTo = Platform.OS === 'web' ? window.location.origin : undefined;
+    const { error } = await supabase.auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo } });
     setBusy(false);
     if (error) setError(errorMessage(error));
     else setSent(true);
@@ -61,6 +63,9 @@ export default function SignIn() {
       ) : (
         <>
           <ThemedText>We sent a code to {email.trim()}.</ThemedText>
+          {Platform.OS === 'web' ? (
+            <ThemedText themeColor="textSecondary">If the email has a sign-in link instead, open it in this browser.</ThemedText>
+          ) : null}
           <Field
             label="Code"
             value={code}
