@@ -8,9 +8,15 @@
     "scheme": "farrierapp",
     "userInterfaceStyle": "automatic",
     "ios": {
+      "bundleIdentifier": "com.zachpeila.farrierapp",
+      "supportsTablet": false,
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.zachpeila.farrierapp",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

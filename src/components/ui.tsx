@@ -1,3 +1,4 @@
+import * as Network from 'expo-network';
 import type { ReactNode } from 'react';
 import {
   ActivityIndicator,
@@ -20,6 +21,7 @@ export function Screen({ children, scroll = true }: { children: ReactNode; scrol
   const inner = <View style={styles.inner}>{children}</View>;
   return (
     <SafeAreaView edges={['bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
+      <NoSignalBar />
       {scroll ? (
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           {inner}
@@ -28,6 +30,20 @@ export function Screen({ children, scroll = true }: { children: ReactNode; scrol
         inner
       )}
     </SafeAreaView>
+  );
+}
+
+/** Shown on every screen while the phone has no signal. */
+function NoSignalBar() {
+  const theme = useTheme();
+  const net = Network.useNetworkState();
+  if (net.isConnected !== false && net.isInternetReachable !== false) return null;
+  return (
+    <View style={[styles.noSignal, { backgroundColor: theme.warning }]}>
+      <ThemedText type="smallBold" style={{ color: '#111' }}>
+        No signal. Showing what&apos;s saved on this phone. Visits you log upload when signal is back.
+      </ThemedText>
+    </View>
   );
 }
 
@@ -272,6 +288,7 @@ export function Loading() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  noSignal: { paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },
   scroll: { flexGrow: 1 },
   inner: {
     flex: 1,

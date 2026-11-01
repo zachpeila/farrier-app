@@ -26,7 +26,7 @@ export default function Invoices() {
   const userId = session!.user.id;
   const farrier = mode === 'farrier';
   const theme = useTheme();
-  const { data, error, loading } = useQuery(fetchInvoices, userId);
+  const { data, error, loading } = useQuery(fetchInvoices, userId, { cache: 'invoices' });
   const [filter, setFilter] = useState<Filter>('open');
 
   if (loading && !data) return <Loading />;

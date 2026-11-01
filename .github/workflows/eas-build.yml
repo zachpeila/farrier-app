@@ -1,0 +1,53 @@
+# Builds the phone app in Expo's cloud (EAS). Run it from the Actions tab:
+# "Build phone app" > Run workflow, then pick the platform and the kind of build.
+#   preview    -> an Android file you can install straight on a phone (iOS: test phones you've registered)
+#   production -> store builds; tick "submit" to send them to TestFlight / Google Play
+# Needs the EXPO_TOKEN repository secret (an access token from expo.dev).
+# iOS signing is set up once from a computer with `npx eas-cli build -p ios`
+# (it asks for the Apple login); after that this workflow can build iOS too.
+name: Build phone app
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Which phones
+        type: choice
+        options: [android, ios, all]
+        default: android
+      profile:
+        description: Kind of build
+        type: choice
+        options: [preview, production]
+        default: preview
+      submit:
+        description: Send production builds to the stores when done
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: npm ci
+
+      - name: Start the build
+        run: >
+          eas build
+          --platform ${{ inputs.platform }}
+          --profile ${{ inputs.profile }}
+          --non-interactive
+          --no-wait
+          ${{ inputs.submit && inputs.profile == 'production' && '--auto-submit' || '' }}

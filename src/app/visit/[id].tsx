@@ -74,7 +74,7 @@ async function loadVisit(id: string): Promise<VisitView | null> {
 export default function VisitScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
-  const { data: v, error, loading } = useQuery(() => loadVisit(id), id);
+  const { data: v, error, loading } = useQuery(() => loadVisit(id), id, { cache: 'visit' });
 
   if (loading && !v) return <Loading />;
   if (!v) return <Screen><ErrorText>{error ?? 'Visit not found.'}</ErrorText></Screen>;

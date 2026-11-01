@@ -28,6 +28,7 @@ export default function DayRoute() {
   const { data, error: loadError, loading, refetch } = useQuery(
     () => fetchDayStops(userId, day),
     `${userId}:${toDateString(day)}`,
+    { cache: 'route' },
   );
   // Local order while saving, so the list doesn't jump back.
   const [order, setOrder] = useState<{ key: string; ids: string[] } | null>(null);

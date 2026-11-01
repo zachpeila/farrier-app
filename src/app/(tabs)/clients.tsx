@@ -10,7 +10,7 @@ import { fetchClients } from '@/lib/queries';
 export default function Clients() {
   const { session } = useAuth();
   const userId = session!.user.id;
-  const { data, error, loading } = useQuery(() => fetchClients(userId), userId);
+  const { data, error, loading } = useQuery(() => fetchClients(userId), userId, { cache: 'clients' });
 
   if (loading && !data) return <Loading />;
 

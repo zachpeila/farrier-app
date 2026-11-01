@@ -10,7 +10,7 @@ import { fetchMyBarns } from '@/lib/queries';
 export default function Barns() {
   const { session, mode } = useAuth();
   const userId = session!.user.id;
-  const { data, error, loading } = useQuery(() => fetchMyBarns(userId), userId);
+  const { data, error, loading } = useQuery(() => fetchMyBarns(userId), userId, { cache: 'barns' });
 
   if (loading && !data) return <Loading />;
 

@@ -9,6 +9,9 @@ import type { Database } from './database.types';
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const key = process.env.EXPO_PUBLIC_SUPABASE_KEY!;
 
+/** Where supabase-js saves the session (its default name for this project). */
+export const AUTH_STORAGE_KEY = `sb-${new URL(url).hostname.split('.')[0]}-auth-token`;
+
 export const supabase = createClient<Database>(url, key, {
   auth: {
     // On web supabase-js uses localStorage itself; AsyncStorage breaks static rendering.
@@ -17,6 +20,7 @@ export const supabase = createClient<Database>(url, key, {
     persistSession: true,
     // On web the sign-in email can carry a link back to the site instead of a code.
     detectSessionInUrl: Platform.OS === 'web',
+    storageKey: AUTH_STORAGE_KEY,
   },
 });
 

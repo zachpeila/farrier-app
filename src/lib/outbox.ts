@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Directory, File, Paths } from 'expo-file-system';
+import * as Network from 'expo-network';
 import { useEffect, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 
@@ -114,6 +115,9 @@ export function syncOutbox(): Promise<void> {
   if (running) return running;
   running = (async () => {
     try {
+      // No point trying with no signal; the network listener below runs this again when it's back.
+      const net = await Network.getNetworkStateAsync().catch(() => null);
+      if (net && (net.isConnected === false || net.isInternetReachable === false)) return;
       const { data } = await supabase.auth.getSession();
       if (!data.session) return;
       for (const item of await listPending()) {
@@ -137,10 +141,21 @@ export function syncOutbox(): Promise<void> {
   return running;
 }
 
-// Try again whenever the app comes back to the foreground.
+// Try again whenever the app comes back to the foreground,
 AppState.addEventListener('change', (state) => {
   if (state === 'active') syncOutbox();
 });
+
+// as soon as the phone gets signal back,
+Network.addNetworkStateListener((state) => {
+  if (state.isConnected && state.isInternetReachable !== false) syncOutbox();
+});
+
+// and every minute while an upload is stuck, since one bar of signal can
+// count as "connected" and then drop again without another network event.
+setInterval(() => {
+  if (lastError && AppState.currentState === 'active') syncOutbox();
+}, 60 * 1000);
 
 /** Visits still on the phone, kept up to date as they upload. */
 export function usePendingVisits() {

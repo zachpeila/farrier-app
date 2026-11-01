@@ -30,7 +30,7 @@ function subtitle(h: HorseListItem, mode: 'farrier' | 'owner') {
 
 export function HorseList() {
   const { mode } = useAuth();
-  const { data, error, loading } = useQuery(fetchHorses);
+  const { data, error, loading } = useQuery(fetchHorses, '', { cache: 'horses' });
 
   if (loading && !data) return <Loading />;
 
