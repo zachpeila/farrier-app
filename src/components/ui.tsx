@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -85,8 +85,101 @@ export function Field({ label, hint, ...input }: TextInputProps & { label: strin
   );
 }
 
-/** A row of mutually exclusive options, e.g. US / Canada. */
+/** Above this many options, Segmented shows a dropdown list instead of a wall of buttons. */
+const MAX_BUTTONS = 8;
+
+/**
+ * Pick one of several options, e.g. US / Canada. A short list shows as
+ * buttons; a long one (barns, arrival times) as a dropdown with search.
+ */
 export function Segmented<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label?: string;
+  options: { value: T; label: string }[];
+  value: T | null;
+  onChange: (v: T) => void;
+}) {
+  if (options.length > MAX_BUTTONS) {
+    return <Dropdown label={label} options={options} value={value} onChange={onChange} />;
+  }
+  return <Buttons label={label} options={options} value={value} onChange={onChange} />;
+}
+
+function Dropdown<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label?: string;
+  options: { value: T; label: string }[];
+  value: T | null;
+  onChange: (v: T) => void;
+}) {
+  const theme = useTheme();
+  const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState('');
+  const current = options.find((o) => o.value === value);
+  const q = filter.trim().toLowerCase();
+  const shown = q ? options.filter((o) => o.label.toLowerCase().includes(q)) : options;
+  return (
+    <View style={styles.field}>
+      {label ? <ThemedText type="smallBold">{label}</ThemedText> : null}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${label ?? 'Choose'}: ${current?.label ?? 'none'}`}
+        onPress={() => setOpen(!open)}
+        style={[styles.input, styles.dropdown, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+        <ThemedText style={{ flex: 1 }} themeColor={current ? 'text' : 'textSecondary'}>
+          {current?.label ?? 'Choose'}
+        </ThemedText>
+        <ThemedText themeColor="textSecondary">{open ? '▴' : '▾'}</ThemedText>
+      </Pressable>
+      {open ? (
+        <View style={[styles.dropdownList, { borderColor: theme.border }]}>
+          {options.length > 12 ? (
+            <TextInput
+              value={filter}
+              onChangeText={setFilter}
+              placeholder="Type to filter"
+              placeholderTextColor={theme.textSecondary}
+              autoCorrect={false}
+              style={[styles.input, { color: theme.text, backgroundColor: theme.background, borderColor: theme.border }]}
+            />
+          ) : null}
+          <ScrollView style={{ maxHeight: 280 }} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+            {shown.map((o) => {
+              const selected = o.value === value;
+              return (
+                <Pressable
+                  key={o.value}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
+                  onPress={() => {
+                    onChange(o.value);
+                    setOpen(false);
+                    setFilter('');
+                  }}
+                  style={({ pressed }) => [styles.dropdownItem, (pressed || selected) && { backgroundColor: theme.backgroundElement }]}>
+                  <ThemedText style={selected ? { fontWeight: 600, color: theme.accent } : undefined}>
+                    {selected ? '✓ ' : ''}
+                    {o.label}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function Buttons<T extends string>({
   label,
   options,
   value,
@@ -298,6 +391,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   segmented: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  dropdown: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  dropdownList: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 10, padding: Spacing.one, gap: Spacing.one },
+  dropdownItem: { minHeight: 44, justifyContent: 'center', paddingHorizontal: Spacing.three, borderRadius: 8 },
   segment: {
     minHeight: 40,
     paddingHorizontal: Spacing.three,

@@ -108,6 +108,18 @@ export async function fetchUpcomingAppointments() {
 }
 export type AppointmentItem = Awaited<ReturnType<typeof fetchUpcomingAppointments>>[number];
 
+/** Every visit (any status) starting in [from, to), for the week view. */
+export async function fetchAppointmentsBetween(from: Date, to: Date) {
+  const { data, error } = await supabase
+    .from('appointments')
+    .select(APPOINTMENT_SELECT)
+    .gte('scheduled_start', from.toISOString())
+    .lt('scheduled_start', to.toISOString())
+    .order('scheduled_start');
+  if (error) throw error;
+  return data;
+}
+
 export async function fetchAppointment(id: string) {
   const { data, error } = await supabase.from('appointments').select(APPOINTMENT_SELECT).eq('id', id).single();
   if (error) throw error;

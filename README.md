@@ -120,6 +120,15 @@ in the client; Row Level Security in the database controls access.
   Email needs the secrets `RESEND_API_KEY` and `EMAIL_FROM`; without them
   it is skipped. Owners on the app ask for a new time and leave notes with
   `request_appointment_change` and `set_appointment_horse_note`.
+- **Getting started fast:** `client/quick` adds a client with their barn
+  and horses on one screen (or picks them from phone contacts), and
+  `client/import` takes pasted spreadsheet rows (name, phone, email,
+  horses split by `;`, barn, address); see `src/lib/quick-add.ts`.
+- **Invite links** point at `/join/<code>` on the website. Signed out, it
+  keeps the code and accepts it right after setup; it also offers to open
+  the installed app.
+- **Schedule** has a week view with past and cancelled visits too. Long
+  option lists (barns, arrival times) show as a dropdown with search.
 - **Account deletion:** Account > Delete my account calls the
   `delete-account` Edge Function, which removes the person's visit photos,
   invoices and payments (these don't cascade), then the auth user; the

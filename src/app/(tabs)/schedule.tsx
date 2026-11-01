@@ -4,7 +4,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { OutboxBanner } from '@/components/outbox-banner';
 import { ThemedText } from '@/components/themed-text';
-import { Button, Card, EmptyState, ErrorText, Loading, Screen, SectionTitle } from '@/components/ui';
+import { WeekView } from '@/components/week-view';
+import { Button, Card, EmptyState, ErrorText, Loading, Screen, SectionTitle, Segmented } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { useQuery } from '@/hooks/use-query';
 import { useTheme } from '@/hooks/use-theme';
@@ -28,6 +29,7 @@ export default function Schedule() {
   const { session, mode } = useAuth();
   const userId = session!.user.id;
   const farrier = mode === 'farrier';
+  const [view, setView] = useState<'list' | 'week'>('list');
   const { data, error, loading, refetch } = useQuery(async () => {
     const [appointments, requests] = await Promise.all([fetchUpcomingAppointments(), fetchOpenRequests()]);
     return { appointments, requests };
@@ -56,10 +58,19 @@ export default function Schedule() {
       ) : (
         <Button title="Request a visit" onPress={() => router.push('/request/new')} />
       )}
+      <Segmented
+        options={[
+          { value: 'list', label: 'Coming up' },
+          { value: 'week', label: 'Week' },
+        ]}
+        value={view}
+        onChange={setView}
+      />
       <ErrorText>{error}</ErrorText>
       <OutboxBanner />
+      {view === 'week' ? <WeekView userId={userId} farrier={farrier} /> : null}
 
-      {toHandle.length > 0 ? (
+      {view === 'list' && toHandle.length > 0 ? (
         <View style={styles.group}>
           <SectionTitle>{farrier ? 'Requests' : 'Your requests'}</SectionTitle>
           {toHandle.map((r) => (
@@ -74,7 +85,7 @@ export default function Schedule() {
         </View>
       ) : null}
 
-      {data && appointments.length === 0 && toHandle.length === 0 ? (
+      {view === 'list' && data && appointments.length === 0 && toHandle.length === 0 ? (
         <EmptyState
           title="Nothing scheduled"
           body={
@@ -85,7 +96,7 @@ export default function Schedule() {
         />
       ) : null}
 
-      {[...byDay].map(([day, items]) => (
+      {(view === 'list' ? [...byDay] : []).map(([day, items]) => (
         <View key={day} style={styles.group}>
           <View style={styles.row}>
             <SectionTitle>{day}</SectionTitle>
