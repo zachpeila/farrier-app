@@ -31,8 +31,12 @@ export default function Schedule() {
   const farrier = mode === 'farrier';
   const [view, setView] = useState<'list' | 'week'>('list');
   const { data, error, loading, refetch } = useQuery(async () => {
-    const [appointments, requests] = await Promise.all([fetchUpcomingAppointments(), fetchOpenRequests()]);
-    return { appointments, requests };
+    const [appointments, requests, newClients] = await Promise.all([
+      fetchUpcomingAppointments(),
+      fetchOpenRequests(),
+      farrier ? supabase.rpc('incoming_client_requests') : Promise.resolve({ data: [] }),
+    ]);
+    return { appointments, requests, newClients: newClients.data ?? [] };
   }, userId);
 
   if (loading && !data) return <Loading />;
@@ -70,6 +74,15 @@ export default function Schedule() {
       <OutboxBanner />
       {view === 'week' ? <WeekView userId={userId} farrier={farrier} /> : null}
 
+      {view === 'list' && (data?.newClients.length ?? 0) > 0 ? (
+        <View style={styles.group}>
+          <SectionTitle>New client requests</SectionTitle>
+          {data!.newClients.map((r) => (
+            <ClientRequestCard key={r.id} request={r} onChanged={refetch} />
+          ))}
+        </View>
+      ) : null}
+
       {view === 'list' && toHandle.length > 0 ? (
         <View style={styles.group}>
           <SectionTitle>{farrier ? 'Requests' : 'Your requests'}</SectionTitle>
@@ -85,7 +98,7 @@ export default function Schedule() {
         </View>
       ) : null}
 
-      {view === 'list' && data && appointments.length === 0 && toHandle.length === 0 ? (
+      {view === 'list' && data && appointments.length === 0 && toHandle.length === 0 && data.newClients.length === 0 ? (
         <EmptyState
           title="Nothing scheduled"
           body={
@@ -147,6 +160,51 @@ function AppointmentCard({ appt, farrier }: { appt: AppointmentItem; farrier: bo
       <ThemedText type="small" themeColor="textSecondary">
         {[who, horses.join(', ')].filter(Boolean).join(' · ')}
       </ThemedText>
+    </Card>
+  );
+}
+
+type ClientRequest = {
+  id: string;
+  owner_name: string;
+  owner_phone: string | null;
+  horse_id: string;
+  horse_name: string;
+  barn_name: string | null;
+  barn_address: string | null;
+  message: string | null;
+};
+
+/** An owner who found the farrier in Find a farrier and asked to become a client. */
+function ClientRequestCard({ request, onChanged }: { request: ClientRequest; onChanged: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function respond(accept: boolean) {
+    if (!accept && !(await confirmAction({ title: `Decline ${request.owner_name}?`, confirmLabel: 'Decline' }))) return;
+    setBusy(true);
+    setError(null);
+    const { data, error } = await supabase.rpc('respond_client_request', { p_request: request.id, p_accept: accept });
+    setBusy(false);
+    if (error) setError(errorMessage(error));
+    else if (accept) router.push({ pathname: '/horse/[id]', params: { id: data } });
+    else onChanged();
+  }
+
+  return (
+    <Card>
+      <ThemedText style={{ fontWeight: 600 }}>
+        {request.owner_name} · {request.horse_name}
+      </ThemedText>
+      <ThemedText type="small" themeColor="textSecondary">
+        {[request.barn_name, request.barn_address, request.owner_phone].filter(Boolean).join(' · ') || 'No barn set yet'}
+      </ThemedText>
+      {request.message ? <ThemedText type="small">{request.message}</ThemedText> : null}
+      <ErrorText>{error}</ErrorText>
+      <View style={styles.actions}>
+        <Button title="Accept as a client" loading={busy} onPress={() => respond(true)} />
+        <Button title="Decline" variant="secondary" onPress={() => respond(false)} />
+      </View>
     </Card>
   );
 }

@@ -129,10 +129,16 @@ export default function HorseScreen() {
           Invite {inv.token} sent to {inv.sent_to}, waiting for them to join.
         </ThemedText>
       ))}
+      {isOwner && mode === 'owner' && farriers.length === 0 ? (
+        <Button
+          title="Find a farrier near you"
+          onPress={() => router.push({ pathname: '/find', params: { horseId: id } })}
+        />
+      ) : null}
       {isOwner && mode === 'owner' ? (
         <Button
-          title={farriers.length ? 'Invite a different farrier' : 'Invite your farrier'}
-          variant={farriers.length ? 'secondary' : 'primary'}
+          title={farriers.length ? 'Invite a different farrier' : 'Invite the farrier you already have'}
+          variant="secondary"
           onPress={() => router.push({ pathname: '/horse/invite', params: { horseId: id } })}
         />
       ) : null}

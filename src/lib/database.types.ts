@@ -250,6 +250,39 @@ export type Database = {
         }
         Relationships: []
       }
+      client_requests: {
+        Row: {
+          created_at: string
+          horse_id: string
+          id: string
+          message: string | null
+          owner_id: string
+          provider_id: string
+          responded_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          horse_id: string
+          id?: string
+          message?: string | null
+          owner_id: string
+          provider_id: string
+          responded_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          horse_id?: string
+          id?: string
+          message?: string | null
+          owner_id?: string
+          provider_id?: string
+          responded_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           archived_at: string | null
@@ -917,6 +950,16 @@ export type Database = {
       }
       profiles: {
         Row: {
+          accepting_clients: boolean
+          base_latitude: number | null
+          base_longitude: number | null
+          bio: string | null
+          certifications: string | null
+          listed: boolean
+          services: string[]
+          show_prices: boolean
+          travel_km: number | null
+          years_experience: number | null
           avatar_path: string | null
           business_name: string | null
           country: string
@@ -937,6 +980,16 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accepting_clients?: boolean
+          base_latitude?: number | null
+          base_longitude?: number | null
+          bio?: string | null
+          certifications?: string | null
+          listed?: boolean
+          services?: string[]
+          show_prices?: boolean
+          travel_km?: number | null
+          years_experience?: number | null
           avatar_path?: string | null
           business_name?: string | null
           country?: string
@@ -957,6 +1010,16 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accepting_clients?: boolean
+          base_latitude?: number | null
+          base_longitude?: number | null
+          bio?: string | null
+          certifications?: string | null
+          listed?: boolean
+          services?: string[]
+          show_prices?: boolean
+          travel_km?: number | null
+          years_experience?: number | null
           avatar_path?: string | null
           business_name?: string | null
           country?: string
@@ -1611,6 +1674,58 @@ export type Database = {
       can_see_appointment: { Args: { a: string }; Returns: boolean }
       can_see_horse: { Args: { h: string }; Returns: boolean }
       can_see_invoice: { Args: { i: string }; Returns: boolean }
+      cancel_client_request: { Args: { p_request: string }; Returns: undefined }
+      find_farriers: {
+        Args: { p_lat: number; p_lng: number }
+        Returns: {
+          accepting: boolean
+          already_mine: boolean
+          bio: string | null
+          certifications: string | null
+          currency: string
+          distance_km: number
+          id: string
+          name: string
+          price_from_cents: number | null
+          region: string | null
+          requested: boolean
+          service_area: string | null
+          services: string[]
+          years_experience: number | null
+        }[]
+      }
+      incoming_client_requests: {
+        Args: never
+        Returns: {
+          barn_address: string | null
+          barn_name: string | null
+          created_at: string
+          horse_id: string
+          horse_name: string
+          id: string
+          message: string | null
+          owner_name: string
+          owner_phone: string | null
+        }[]
+      }
+      my_farrier_requests: {
+        Args: never
+        Returns: {
+          created_at: string
+          farrier_name: string
+          horse_name: string
+          id: string
+          status: string
+        }[]
+      }
+      request_farrier: {
+        Args: { p_horse: string; p_message: string; p_provider: string }
+        Returns: string
+      }
+      respond_client_request: {
+        Args: { p_accept: boolean; p_request: string }
+        Returns: string
+      }
       cancel_visit_request: { Args: { p_request: string }; Returns: undefined }
       client_link: {
         Args: { p_appointment?: string; p_client: string; p_invoice?: string }

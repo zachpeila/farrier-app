@@ -129,6 +129,13 @@ in the client; Row Level Security in the database controls access.
   the installed app.
 - **Schedule** has a week view with past and cancelled visits too. Long
   option lists (barns, arrival times) show as a dropdown with search.
+- **Find a farrier:** farriers opt in under Account > Get found by owners
+  near you (`settings/listing`: home base rounded to about 1 km, travel
+  radius, services, experience, optional starting price). Owners search
+  from a barn, their location or a town (`find`, `find_farriers()`), and
+  ask to become a client (`client_requests`, `request_farrier()`). The
+  farrier accepts on the Schedule tab (`respond_client_request()`), which
+  links them to the horse and adds the owner as a client.
 - **Account deletion:** Account > Delete my account calls the
   `delete-account` Edge Function, which removes the person's visit photos,
   invoices and payments (these don't cascade), then the auth user; the

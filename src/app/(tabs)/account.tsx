@@ -56,8 +56,18 @@ export default function Account() {
           <SectionTitle>Business</SectionTitle>
           <Button title="Prices and taxes" variant="secondary" onPress={() => router.push('/settings/billing')} />
           <Button title="Your barns" variant="secondary" onPress={() => router.push('/barns')} />
+          <Button
+            title={profile?.listed ? 'Your listing in Find a farrier (on)' : 'Get found by owners near you'}
+            variant="secondary"
+            onPress={() => router.push('/settings/listing')}
+          />
         </>
-      ) : null}
+      ) : (
+        <>
+          <SectionTitle>Farrier</SectionTitle>
+          <Button title="Find a farrier near you" variant="secondary" onPress={() => router.push('/find')} />
+        </>
+      )}
 
       <SectionTitle>Invites</SectionTitle>
       <Button title="Enter an invite code" variant="secondary" onPress={() => router.push('/invite')} />

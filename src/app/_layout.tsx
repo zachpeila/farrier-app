@@ -72,6 +72,8 @@ function RootStack() {
         <Stack.Screen name="route" options={{ title: 'Day route' }} />
         <Stack.Screen name="request/new" options={{ title: 'Request a visit', presentation: 'modal' }} />
         <Stack.Screen name="search" options={{ title: 'Search' }} />
+        <Stack.Screen name="find" options={{ title: 'Find a farrier' }} />
+        <Stack.Screen name="settings/listing" options={{ title: 'Your listing' }} />
       </Stack.Protected>
     </Stack>
   );
