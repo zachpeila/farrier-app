@@ -19,12 +19,18 @@ import {
   WINDOW_STARTS,
 } from '@/lib/schedule';
 import { errorMessage, supabase } from '@/lib/supabase';
+import { confirmAction } from '@/lib/confirm';
 
 export default function AppointmentScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
   const theme = useTheme();
   const { data: appt, error: loadError, loading, refetch } = useQuery(() => fetchAppointment(id), id);
+  // The farrier's private notes for each horse, so they're in front of them at the barn.
+  const { data: notes } = useQuery(async () => {
+    const { data } = await supabase.from('horse_notes').select('horse_id, notes').eq('provider_id', session!.user.id);
+    return new Map((data ?? []).map((n) => [n.horse_id, n.notes]));
+  }, `notes:${session!.user.id}`);
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,6 +95,11 @@ export default function AppointmentScreen() {
         {appt.appointment_horses.map((ah) => (
           <Card key={ah.horse_id} onPress={() => router.push({ pathname: '/horse/[id]', params: { id: ah.horse_id } })}>
             <ThemedText style={{ fontWeight: 600 }}>{ah.horses?.name ?? 'Horse'}</ThemedText>
+            {isFarrier && notes?.get(ah.horse_id) ? (
+              <ThemedText type="small" style={{ color: theme.warning }}>
+                {notes.get(ah.horse_id)}
+              </ThemedText>
+            ) : null}
             {isFarrier && !cancelled ? (
               <Pressable
                 accessibilityRole="button"
@@ -158,7 +169,14 @@ export default function AppointmentScreen() {
             title="Cancel visit"
             variant="danger"
             loading={busy}
-            onPress={() => run(() => supabase.from('appointments').update({ status: 'cancelled' }).eq('id', id))}
+            onPress={async () => {
+              const ok = await confirmAction({
+                title: 'Cancel this visit?',
+                message: 'It comes off your schedule and the owners\' schedule.',
+                confirmLabel: 'Cancel visit',
+              });
+              if (ok) run(() => supabase.from('appointments').update({ status: 'cancelled' }).eq('id', id));
+            }}
           />
         </>
       ) : null}

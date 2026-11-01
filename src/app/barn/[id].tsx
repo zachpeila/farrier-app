@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Button, ErrorText, Field, Loading, Screen, SectionTitle } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { errorMessage, supabase } from '@/lib/supabase';
+import { confirmAction } from '@/lib/confirm';
 
 /** Create (id = "new") or edit a barn, and pin it on the map for the day route. */
 export default function BarnScreen() {
@@ -85,6 +86,12 @@ export default function BarnScreen() {
   }
 
   async function archive() {
+    const ok = await confirmAction({
+      title: 'Archive this barn?',
+      message: 'It leaves your barn list. Horses there keep their records.',
+      confirmLabel: 'Archive',
+    });
+    if (!ok) return;
     setBusy(true);
     const { error } = await supabase.from('locations').update({ archived_at: new Date().toISOString() }).eq('id', id);
     setBusy(false);

@@ -16,6 +16,7 @@ import { fetchInvoice, type InvoiceDetail } from '@/lib/queries';
 import { addDays, toDateString } from '@/lib/schedule';
 import { errorMessage, supabase } from '@/lib/supabase';
 import { formatRate } from '@/lib/tax-presets';
+import { confirmAction } from '@/lib/confirm';
 
 type TaxLine = { name: string; rate_bp: number; tax_number: string | null; cents: number };
 
@@ -246,7 +247,10 @@ export default function InvoiceScreen() {
             title="Delete draft"
             variant="danger"
             loading={busy}
-            onPress={() => run(() => supabase.from('invoices').delete().eq('id', id), () => router.back())}
+            onPress={async () => {
+              if (await confirmAction({ title: 'Delete this draft invoice?', confirmLabel: 'Delete' }))
+                run(() => supabase.from('invoices').delete().eq('id', id), () => router.back());
+            }}
           />
         </>
       ) : null}
@@ -267,7 +271,14 @@ export default function InvoiceScreen() {
               title="Void invoice"
               variant="secondary"
               loading={busy}
-              onPress={() => run(() => supabase.from('invoices').update({ status: 'void' }).eq('id', id))}
+              onPress={async () => {
+                const ok = await confirmAction({
+                  title: `Void invoice #${inv.invoice_number}?`,
+                  message: 'The client no longer owes it. This cannot be undone.',
+                  confirmLabel: 'Void invoice',
+                });
+                if (ok) run(() => supabase.from('invoices').update({ status: 'void' }).eq('id', id));
+              }}
             />
           ) : null}
         </>

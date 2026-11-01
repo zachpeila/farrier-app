@@ -100,6 +100,14 @@ in the client; Row Level Security in the database controls access.
   reminders. Every send is logged in `notifications`, which is also how
   repeats are avoided. Tapping a reminder opens the horse, visit or invoice.
 
+- **Account deletion:** Account > Delete my account calls the
+  `delete-account` Edge Function, which removes the person's visit photos,
+  invoices and payments (these don't cascade), then the auth user; the
+  rest cascades from `profiles`. App stores require this.
+- **Privacy policy and terms:** `src/lib/legal.ts`, shown at
+  `/legal/privacy` and `/legal/terms` without signing in. Draft; set
+  `OPERATOR` and `CONTACT_EMAIL` before launch.
+
 ## MVP build order
 
 1. Horses, barns, clients, owner invite ✅

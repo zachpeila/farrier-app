@@ -18,6 +18,7 @@ import {
 } from '@/lib/queries';
 import { formatDay, formatWindow, toDateString } from '@/lib/schedule';
 import { errorMessage, supabase } from '@/lib/supabase';
+import { confirmAction } from '@/lib/confirm';
 
 /**
  * Farrier: open visit requests, then upcoming stops by day.
@@ -196,9 +197,10 @@ function RequestCard({
                 title="Decline"
                 variant="secondary"
                 loading={busy}
-                onPress={() =>
-                  run(() => supabase.rpc('respond_to_visit_request', { p_request: request.id, p_accept: false }))
-                }
+                onPress={async () => {
+                  if (await confirmAction({ title: 'Decline this request?', confirmLabel: 'Decline' }))
+                    run(() => supabase.rpc('respond_to_visit_request', { p_request: request.id, p_accept: false }));
+                }}
               />
             ) : null}
           </>
@@ -207,7 +209,10 @@ function RequestCard({
             title="Cancel request"
             variant="secondary"
             loading={busy}
-            onPress={() => run(() => supabase.rpc('cancel_visit_request', { p_request: request.id }))}
+            onPress={async () => {
+              if (await confirmAction({ title: 'Cancel this request?', confirmLabel: 'Cancel request' }))
+                run(() => supabase.rpc('cancel_visit_request', { p_request: request.id }));
+            }}
           />
         )}
       </View>

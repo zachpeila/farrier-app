@@ -29,3 +29,9 @@ export async function payInvoiceByCard(invoiceId: string) {
   const { url } = await call<{ url: string }>('invoice-checkout', { invoiceId });
   await WebBrowser.openBrowserAsync(url);
 }
+
+/** Deletes the signed-in person's account and their data, then signs them out. */
+export async function deleteMyAccount() {
+  await call<{ deleted: boolean }>('delete-account');
+  await supabase.auth.signOut();
+}

@@ -1,12 +1,13 @@
 import { Image } from 'expo-image';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Card, ErrorText, Loading, Screen, SectionTitle } from '@/components/ui';
+import { Button, Card, ErrorText, Loading, Screen, SectionTitle } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { useQuery } from '@/hooks/use-query';
 import { useTheme } from '@/hooks/use-theme';
+import { useAuth } from '@/lib/auth';
 import { formatDate } from '@/lib/dates';
 import { listPending } from '@/lib/outbox';
 import { fetchVisit } from '@/lib/queries';
@@ -23,6 +24,8 @@ type FootRow = {
 };
 
 type VisitView = {
+  horseId: string;
+  providerId: string;
   date: string;
   workType: string | null;
   notes: string | null;
@@ -41,6 +44,8 @@ async function loadVisit(id: string): Promise<VisitView | null> {
   const pending = (await listPending()).find((p) => p.visit.id === id);
   if (pending) {
     return {
+      horseId: pending.visit.horse_id,
+      providerId: pending.visit.provider_id,
       date: pending.visit.visit_date,
       workType: pending.visit.work_type ?? null,
       notes: pending.visit.notes ?? null,
@@ -57,6 +62,8 @@ async function loadVisit(id: string): Promise<VisitView | null> {
   const v = await fetchVisit(id);
   if (!v) return null;
   return {
+    horseId: v.horse_id,
+    providerId: v.provider_id,
     date: v.visit_date,
     workType: v.work_type,
     notes: v.notes,
@@ -74,6 +81,7 @@ async function loadVisit(id: string): Promise<VisitView | null> {
 export default function VisitScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
+  const { session } = useAuth();
   const { data: v, error, loading } = useQuery(() => loadVisit(id), id);
 
   if (loading && !v) return <Loading />;
@@ -153,6 +161,14 @@ export default function VisitScreen() {
             )}
           </View>
         </>
+      ) : null}
+
+      {v.providerId === session?.user.id ? (
+        <Button
+          title="Edit visit"
+          variant="secondary"
+          onPress={() => router.push({ pathname: '/visit/new', params: { horseId: v.horseId, editId: id } })}
+        />
       ) : null}
 
       <ThemedText type="small" themeColor="textSecondary">

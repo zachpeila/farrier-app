@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 
@@ -79,6 +80,18 @@ export default function SignIn() {
           <Button title="Use a different email" variant="secondary" onPress={() => setSent(false)} />
         </>
       )}
+
+      <ThemedText type="small" themeColor="textSecondary">
+        By signing in you agree to the{' '}
+        <ThemedText type="small" themeColor="accent" onPress={() => router.push('/legal/terms')}>
+          terms of use
+        </ThemedText>{' '}
+        and{' '}
+        <ThemedText type="small" themeColor="accent" onPress={() => router.push('/legal/privacy')}>
+          privacy policy
+        </ThemedText>
+        .
+      </ThemedText>
     </Screen>
   );
 }

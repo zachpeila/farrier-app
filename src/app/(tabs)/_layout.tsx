@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { router } from 'expo-router';
 import { Tabs } from 'expo-router/tabs';
 import type { ComponentProps } from 'react';
-import type { ColorValue } from 'react-native';
+import { Pressable, type ColorValue } from 'react-native';
 
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
@@ -22,7 +23,20 @@ export default function TabLayout() {
   // Farriers start on the due list. Owners start on their horses, so the
   // first tab shows horses for them and the separate Horses tab is hidden.
   return (
-    <Tabs screenOptions={{ tabBarActiveTintColor: theme.accent }}>
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: theme.accent,
+        headerRight: () => (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Search"
+            hitSlop={12}
+            onPress={() => router.push('/search')}
+            style={{ paddingHorizontal: 16 }}>
+            <Ionicons name="search" size={22} color={theme.text} />
+          </Pressable>
+        ),
+      }}>
       <Tabs.Screen
         name="index"
         options={{

@@ -21,6 +21,8 @@ export type PendingVisit = {
   flags: { id: string; flag_type: string; notes: string | null }[];
   photos: PendingPhoto[];
   savedAt: string;
+  /** Set when editing a saved visit: problems not in `flags` are removed on upload. */
+  replaceFlags?: boolean;
 };
 
 const KEY = 'outbox.visits.v1';
@@ -72,6 +74,12 @@ async function upload(item: PendingVisit) {
 
   if (item.feet.length) {
     const { error } = await supabase.from('visit_feet').upsert(item.feet, { onConflict: 'visit_id,foot' });
+    if (error) throw error;
+  }
+  if (item.replaceFlags) {
+    let del = supabase.from('visit_flags').delete().eq('visit_id', visit.id);
+    if (item.flags.length) del = del.not('id', 'in', `(${item.flags.map((f) => f.id).join(',')})`);
+    const { error } = await del;
     if (error) throw error;
   }
   if (item.flags.length) {

@@ -2,6 +2,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
+import { HorseNotes } from '@/components/horse-notes';
 import { ThemedText } from '@/components/themed-text';
 import { Button, Card, ErrorText, Field, Loading, Screen, SectionTitle, Segmented } from '@/components/ui';
 import { useQuery } from '@/hooks/use-query';
@@ -13,6 +14,7 @@ import { fetchHorse, fetchHorseVisits, fetchMyBarns } from '@/lib/queries';
 import { FLAG_TYPES, label, WORK_TYPES } from '@/lib/visit-options';
 import { errorMessage, supabase } from '@/lib/supabase';
 import type { ShoeStatus } from '@/lib/types';
+import { confirmAction } from '@/lib/confirm';
 
 const NONE = 'none';
 
@@ -64,6 +66,8 @@ export default function HorseScreen() {
           </ThemedText>
         </Card>
       ) : null}
+
+      {myLink ? <HorseNotes horseId={id} userId={userId} /> : null}
 
       {myLink ? (
         <Segmented
@@ -261,6 +265,12 @@ function HorseDetailsForm({
   }
 
   async function archive() {
+    const ok = await confirmAction({
+      title: `Archive ${horse.name}?`,
+      message: 'The horse leaves your lists and due list. Its records are kept.',
+      confirmLabel: 'Archive',
+    });
+    if (!ok) return;
     setBusy(true);
     const { error } = await supabase.from('horses').update({ archived_at: new Date().toISOString() }).eq('id', horse.id);
     setBusy(false);

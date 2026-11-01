@@ -32,6 +32,8 @@ function RootStack() {
 
   return (
     <Stack screenOptions={{ headerBackButtonDisplayMode: 'minimal' }}>
+      {/* Public, so the app stores and people not signed in can read them. */}
+      <Stack.Screen name="legal/[doc]" options={{ title: '' }} />
       <Stack.Protected guard={!session}>
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />
       </Stack.Protected>
@@ -55,6 +57,7 @@ function RootStack() {
         <Stack.Screen name="settings/billing" options={{ title: 'Prices and taxes' }} />
         <Stack.Screen name="route" options={{ title: 'Day route' }} />
         <Stack.Screen name="request/new" options={{ title: 'Request a visit', presentation: 'modal' }} />
+        <Stack.Screen name="search" options={{ title: 'Search' }} />
       </Stack.Protected>
     </Stack>
   );
