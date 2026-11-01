@@ -30,7 +30,7 @@ export default function Schedule() {
   const { data, error, loading, refetch } = useQuery(async () => {
     const [appointments, requests] = await Promise.all([fetchUpcomingAppointments(), fetchOpenRequests()]);
     return { appointments, requests };
-  }, userId);
+  }, userId, { cache: 'schedule' });
 
   if (loading && !data) return <Loading />;
 

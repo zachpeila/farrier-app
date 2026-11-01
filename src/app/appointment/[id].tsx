@@ -24,7 +24,7 @@ export default function AppointmentScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
   const theme = useTheme();
-  const { data: appt, error: loadError, loading, refetch } = useQuery(() => fetchAppointment(id), id);
+  const { data: appt, error: loadError, loading, refetch } = useQuery(() => fetchAppointment(id), id, { cache: 'appointment' });
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

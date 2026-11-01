@@ -9,7 +9,7 @@ import { useAuth } from '@/lib/auth';
 import { dueLabel, formatDate } from '@/lib/dates';
 import { INTERVAL_OPTIONS, SHOE_OPTIONS } from '@/lib/horse-options';
 import { usePendingVisits } from '@/lib/outbox';
-import { fetchHorse, fetchHorseVisits, fetchMyBarns } from '@/lib/queries';
+import { fetchHorse, fetchHorseScreen, fetchHorseVisits, fetchMyBarns } from '@/lib/queries';
 import { FLAG_TYPES, label, WORK_TYPES } from '@/lib/visit-options';
 import { errorMessage, supabase } from '@/lib/supabase';
 import type { ShoeStatus } from '@/lib/types';
@@ -22,24 +22,9 @@ export default function HorseScreen() {
   const userId = session!.user.id;
 
   const { data, error: loadError, loading, refetch } = useQuery(
-    async () => {
-      const [horse, barns, due, invites, visits] = await Promise.all([
-        fetchHorse(id),
-        fetchMyBarns(userId),
-        supabase.from('due_horses').select('*').eq('horse_id', id),
-        supabase
-          .from('provider_invites')
-          .select('id, sent_to, token, created_at')
-          .eq('horse_id', id)
-          .is('accepted_at', null)
-          .gt('expires_at', new Date().toISOString()),
-        fetchHorseVisits(id),
-      ]);
-      if (due.error) throw due.error;
-      if (invites.error) throw invites.error;
-      return { horse, barns, due: due.data, invites: invites.data, visits };
-    },
+    () => fetchHorseScreen(id, userId),
     `${id}:${userId}`,
+    { cache: 'horse' },
   );
 
   const horse = data?.horse;

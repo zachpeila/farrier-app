@@ -23,7 +23,7 @@ const NO_BARN = 'No barn set';
 export function DueList() {
   const { session } = useAuth();
   const userId = session!.user.id;
-  const { data, error, loading } = useQuery(() => fetchDueList(userId), userId);
+  const { data, error, loading } = useQuery(() => fetchDueList(userId), userId, { cache: 'due' });
   const [filter, setFilter] = useState<Filter>('soon');
 
   const groups = useMemo(() => {

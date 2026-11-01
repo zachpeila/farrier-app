@@ -228,3 +228,22 @@ export async function fetchInvoice(id: string) {
   };
 }
 export type InvoiceDetail = Awaited<ReturnType<typeof fetchInvoice>>;
+
+/** Everything the horse screen shows. Also loaded ahead of time so it opens at a barn with no signal. */
+export async function fetchHorseScreen(id: string, userId: string) {
+  const [horse, barns, due, invites, visits] = await Promise.all([
+    fetchHorse(id),
+    fetchMyBarns(userId),
+    supabase.from('due_horses').select('*').eq('horse_id', id),
+    supabase
+      .from('provider_invites')
+      .select('id, sent_to, token, created_at')
+      .eq('horse_id', id)
+      .is('accepted_at', null)
+      .gt('expires_at', new Date().toISOString()),
+    fetchHorseVisits(id),
+  ]);
+  if (due.error) throw due.error;
+  if (invites.error) throw invites.error;
+  return { horse, barns, due: due.data, invites: invites.data, visits };
+}

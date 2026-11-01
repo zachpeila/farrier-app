@@ -53,7 +53,7 @@ export default function InvoiceScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
   const theme = useTheme();
-  const { data: inv, error: loadError, loading, refetch } = useQuery(() => fetchInvoice(id), id);
+  const { data: inv, error: loadError, loading, refetch } = useQuery(() => fetchInvoice(id), id, { cache: 'invoice' });
   const [editLines, setEditLines] = useState<DraftLine[] | null>(null);
   const [paying, setPaying] = useState(false);
   const [busy, setBusy] = useState(false);

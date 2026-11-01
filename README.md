@@ -24,6 +24,38 @@ in the client; Row Level Security in the database controls access.
 - **Invite links:** add `farrierapp://**` to Authentication > URL
   Configuration > Redirect URLs (only needed once links open the app).
 
+## Phone app (iOS and Android)
+
+Built and signed in Expo's cloud with EAS (`eas.json`); no Xcode or
+Android Studio needed. App ids: `com.zachpeila.farrierapp` on both.
+
+- **Build:** GitHub > Actions > "Build phone app" > Run workflow. Pick the
+  platform and `preview` (Android file to install directly, for testing)
+  or `production` (store build; tick *submit* to send it to TestFlight or
+  Google Play). Needs the `EXPO_TOKEN` repository secret.
+- **iOS first time:** run `npx eas-cli build -p ios --profile production`
+  once from a computer and sign in to Apple when asked. EAS creates the
+  signing certificate and the push key; later builds run from GitHub.
+- **Push:** needs `expo.extra.eas.projectId` in `app.json` (the app skips
+  push until it's set), plus the Firebase `google-services.json` for
+  Android and the Apple push key for iOS, both added on expo.dev.
+
+### Offline
+
+Barns often have no signal, so:
+
+- Visits are saved on the phone first and uploaded later (`src/lib/outbox.ts`):
+  right away when signal comes back, when the app reopens, and every
+  minute while an upload is stuck.
+- Screens keep their last loaded data on the phone (`useQuery(..., { cache })`,
+  `src/lib/offline-cache.ts`), and while there's signal the app saves the
+  next two days of visits and every horse on them (`src/lib/warm-up.ts`),
+  so the route, visit and horse history open at the barn. Saved copies
+  are cleared on sign out and after 30 days.
+- Opening the app offline after the login token expired keeps the person
+  signed in (`src/lib/auth.tsx`); the token renews once there's signal.
+- Booking, invoices and other edits still need signal.
+
 ## Server code
 
 - `supabase/functions/` Edge Functions (Deno). Deploy with

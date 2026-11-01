@@ -1,11 +1,13 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Network from 'expo-network';
 import { useEffect } from 'react';
-import { useColorScheme } from 'react-native';
+import { AppState, useColorScheme } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { syncOutbox } from '@/lib/outbox';
 import { registerForPush, useNotificationRouting } from '@/lib/push';
+import { warmOfflineCache } from '@/lib/warm-up';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -21,8 +23,27 @@ function RootStack() {
     if (session) syncOutbox();
   }, [session]);
 
-  // Register this phone for reminders once someone has finished setup.
   const userId = session?.user.id;
+
+  // A farrier's next visits and horses are saved on the phone while there's
+  // signal, then refreshed on coming back to the app or getting signal back.
+  useEffect(() => {
+    if (!userId || mode !== 'farrier') return;
+    const warm = () => warmOfflineCache(userId);
+    warm();
+    const app = AppState.addEventListener('change', (state) => {
+      if (state === 'active') warm();
+    });
+    const net = Network.addNetworkStateListener((state) => {
+      if (state.isConnected && state.isInternetReachable !== false) warm();
+    });
+    return () => {
+      app.remove();
+      net.remove();
+    };
+  }, [userId, mode]);
+
+  // Register this phone for reminders once someone has finished setup.
   useEffect(() => {
     if (userId && mode) registerForPush(userId).catch(() => {});
   }, [userId, mode]);
