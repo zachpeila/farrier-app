@@ -229,6 +229,7 @@ function VisitForm({
   const [dueWeeks, setDueWeeks] = useState(initialWeeks);
   const [share, setShare] = useState(editing ? start.shared !== false : true);
   const [photos, setPhotos] = useState<PendingPhoto[]>(start.localPhotos);
+  const [photoFoot, setPhotoFoot] = useState<Foot | 'all'>('all');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -271,7 +272,7 @@ function VisitForm({
       if (result.canceled || !result.assets[0]) return;
       const id = Crypto.randomUUID();
       const localUri = await keepPhoto(result.assets[0].uri, id);
-      setPhotos((p) => [...p, { id, localUri, label: photoLabel }]);
+      setPhotos((p) => [...p, { id, localUri, label: photoLabel, foot: photoFoot === 'all' ? null : photoFoot }]);
     } catch (e) {
       setError(errorMessage(e));
     }
@@ -405,9 +406,20 @@ function VisitForm({
       ) : null}
       <View style={styles.photos}>
         {photos.map((p) => (
-          <Image key={p.id} source={{ uri: p.localUri }} style={styles.photo} contentFit="cover" />
+          <View key={p.id} style={{ gap: 2 }}>
+            <Image source={{ uri: p.localUri }} style={styles.photo} contentFit="cover" />
+            <ThemedText type="small" themeColor="textSecondary">
+              {[p.foot, p.label === 'before' ? 'Before' : 'After'].filter(Boolean).join(' · ')}
+            </ThemedText>
+          </View>
         ))}
       </View>
+      <Segmented
+        label="Next photo shows"
+        options={[{ value: 'all', label: 'Whole horse' }, ...FEET.map((f) => ({ value: f.value, label: f.value }))]}
+        value={photoFoot}
+        onChange={setPhotoFoot}
+      />
       <View style={styles.photoButtons}>
         <View style={{ flex: 1 }}>
           <Button title="Before photo" variant="secondary" onPress={() => addPhoto('before')} />

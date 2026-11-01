@@ -151,19 +151,13 @@ export default function AppointmentScreen() {
 
       {isFarrier && !cancelled && !editing ? (
         <Button
-          title="Create invoice"
-          variant={appt.status === 'completed' ? 'primary' : 'secondary'}
-          onPress={() => router.push({ pathname: '/invoice/new', params: { appointmentId: appt.id } })}
+          title={appt.status === 'completed' ? 'Invoices and next visit' : 'Finish stop'}
+          onPress={() => router.push({ pathname: '/appointment/finish', params: { id: appt.id } })}
         />
       ) : null}
 
       {isFarrier && appt.status === 'scheduled' && !editing ? (
         <>
-          <Button
-            title="Mark visit done"
-            loading={busy}
-            onPress={() => run(() => supabase.from('appointments').update({ status: 'completed' }).eq('id', id))}
-          />
           <Button title="Change time" variant="secondary" onPress={() => setEditing(true)} />
           <Button
             title="Cancel visit"

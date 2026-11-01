@@ -100,6 +100,12 @@ in the client; Row Level Security in the database controls access.
   reminders. Every send is logged in `notifications`, which is also how
   repeats are avoided. Tapping a reminder opens the horse, visit or invoice.
 
+- **Finish stop:** `appointment/finish` lists each horse at the stop (log
+  any that aren't), makes a draft invoice per owner whose horses were
+  worked on (`src/lib/stop-invoices.ts`; the trip fee is split evenly
+  between them), marks the stop done, and books the next visit for the
+  same horses at the shortest shoeing interval. New visits start from the
+  horse's last visit; saved visits can be edited; photos carry a foot.
 - **Account deletion:** Account > Delete my account calls the
   `delete-account` Edge Function, which removes the person's visit photos,
   invoices and payments (these don't cascade), then the auth user; the

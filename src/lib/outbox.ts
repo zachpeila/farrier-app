@@ -13,7 +13,13 @@ import { errorMessage, supabase } from './supabase';
  * makes each upload safe to retry.
  */
 
-export type PendingPhoto = { id: string; localUri: string; label: 'before' | 'after' };
+export type PendingPhoto = {
+  id: string;
+  localUri: string;
+  label: 'before' | 'after';
+  /** Which foot the photo shows; missing means the whole horse or all feet. */
+  foot?: 'LF' | 'RF' | 'LH' | 'RH' | null;
+};
 
 export type PendingVisit = {
   visit: Omit<TablesInsert<'visits'>, 'id' | 'season'> & { id: string };
@@ -98,7 +104,10 @@ async function upload(item: PendingVisit) {
     if (uploadError && !/exists|duplicate/i.test(uploadError.message)) throw uploadError;
     const { error } = await supabase
       .from('visit_photos')
-      .upsert({ id: photo.id, visit_id: visit.id, storage_path: path, label: photo.label }, { onConflict: 'id' });
+      .upsert(
+        { id: photo.id, visit_id: visit.id, storage_path: path, label: photo.label, foot: photo.foot ?? null },
+        { onConflict: 'id' },
+      );
     if (error) throw error;
   }
 }

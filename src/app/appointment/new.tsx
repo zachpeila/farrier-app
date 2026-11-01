@@ -26,7 +26,7 @@ const NONE = 'none';
  * or an owner's visit request.
  */
 export default function NewAppointment() {
-  const params = useLocalSearchParams<{ barnId?: string; horseIds?: string; requestId?: string }>();
+  const params = useLocalSearchParams<{ barnId?: string; horseIds?: string; requestId?: string; day?: string }>();
   const { session } = useAuth();
   const userId = session!.user.id;
 
@@ -52,7 +52,8 @@ export default function NewAppointment() {
   const preferred = data?.request?.preferred_start;
   const [day, setDay] = useState<Date | null>(null);
   const today = startOfDay(new Date());
-  const defaultDay = preferred && new Date(`${preferred}T00:00`) > today ? new Date(`${preferred}T00:00`) : addDays(today, 1);
+  const suggested = params.day || preferred;
+  const defaultDay = suggested && new Date(`${suggested}T00:00`) > today ? new Date(`${suggested}T00:00`) : addDays(today, 1);
   const date = day ?? defaultDay;
 
   const [start, setStart] = useState('480'); // 8:00 AM

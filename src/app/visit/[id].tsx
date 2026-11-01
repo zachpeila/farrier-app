@@ -35,7 +35,7 @@ type VisitView = {
   by: string | null;
   flags: string[];
   feet: FootRow[];
-  photos: { id: string; url: string | null; label: string | null }[];
+  photos: { id: string; url: string | null; label: string | null; foot?: string | null }[];
   pending: boolean;
 };
 
@@ -55,7 +55,7 @@ async function loadVisit(id: string): Promise<VisitView | null> {
       by: null,
       flags: pending.flags.map((f) => f.flag_type),
       feet: pending.feet,
-      photos: pending.photos.map((p) => ({ id: p.id, url: p.localUri, label: p.label })),
+      photos: pending.photos.map((p) => ({ id: p.id, url: p.localUri, label: p.label, foot: p.foot })),
       pending: true,
     };
   }
@@ -73,7 +73,7 @@ async function loadVisit(id: string): Promise<VisitView | null> {
     by: v.profiles?.business_name || v.profiles?.full_name || null,
     flags: v.visit_flags.map((f) => f.flag_type),
     feet: v.visit_feet,
-    photos: v.visit_photos.map((p) => ({ id: p.id, url: p.url, label: p.label })),
+    photos: v.visit_photos.map((p) => ({ id: p.id, url: p.url, label: p.label, foot: p.foot })),
     pending: false,
   };
 }
@@ -151,9 +151,14 @@ export default function VisitScreen() {
               p.url ? (
                 <View key={p.id} style={styles.photoWrap}>
                   <Image source={{ uri: p.url }} style={styles.photo} contentFit="cover" />
-                  {p.label ? (
+                  {p.label || p.foot ? (
                     <ThemedText type="small" themeColor="textSecondary">
-                      {p.label === 'before' ? 'Before' : 'After'}
+                      {[
+                        FEET.find((f) => f.value === p.foot)?.label,
+                        p.label ? (p.label === 'before' ? 'Before' : 'After') : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </ThemedText>
                   ) : null}
                 </View>
