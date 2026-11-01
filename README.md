@@ -106,6 +106,20 @@ in the client; Row Level Security in the database controls access.
   between them), marks the stop done, and books the next visit for the
   same horses at the shortest shoeing interval. New visits start from the
   horse's last visit; saved visits can be edited; photos carry a foot.
+- **Reaching owners not on the app:** every owner gets their own link
+  (`public_links`, made by `client_link()`), opening `/l/<token>` on the
+  website with no sign-in. There they confirm a visit, ask for another
+  time, leave a note per horse, or see and pay an invoice (print to PDF
+  from the browser). The `public-link` Edge Function serves it with the
+  service role and only shows that client's horses. Farriers send links
+  from the visit, invoice and day route screens: **Text** opens the
+  phone's Messages app (from the farrier's own number), **Email** calls
+  `notify-clients`, which emails through Resend and pushes to owners on
+  the app. `send-reminders` also emails non-app owners the day before a
+  visit and weekly for past-due invoices (logged in `client_messages`).
+  Email needs the secrets `RESEND_API_KEY` and `EMAIL_FROM`; without them
+  it is skipped. Owners on the app ask for a new time and leave notes with
+  `request_appointment_change` and `set_appointment_horse_note`.
 - **Account deletion:** Account > Delete my account calls the
   `delete-account` Edge Function, which removes the person's visit photos,
   invoices and payments (these don't cascade), then the auth user; the

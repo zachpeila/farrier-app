@@ -34,6 +34,7 @@ function RootStack() {
     <Stack screenOptions={{ headerBackButtonDisplayMode: 'minimal' }}>
       {/* Public, so the app stores and people not signed in can read them. */}
       <Stack.Screen name="legal/[doc]" options={{ title: '' }} />
+      <Stack.Screen name="l/[token]" options={{ title: '' }} />
       <Stack.Protected guard={!session}>
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />
       </Stack.Protected>

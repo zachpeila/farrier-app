@@ -105,7 +105,7 @@ export default function NewAppointment() {
         await supabase.from('appointments').delete().eq('id', appt.id);
         throw horsesError;
       }
-      router.replace({ pathname: '/appointment/[id]', params: { id: appt.id } });
+      router.replace({ pathname: '/appointment/[id]', params: { id: appt.id, notify: 'booked' } });
     } catch (e) {
       setError(errorMessage(e));
       setBusy(false);

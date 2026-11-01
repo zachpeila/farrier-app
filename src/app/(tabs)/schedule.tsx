@@ -122,7 +122,15 @@ function AppointmentCard({ appt, farrier }: { appt: AppointmentItem; farrier: bo
       <View style={styles.row}>
         <ThemedText style={{ fontWeight: 600 }}>{formatWindow(appt.scheduled_start, appt.scheduled_end)}</ThemedText>
         <ThemedText type="smallBold" style={{ color: appt.owner_confirmed_at ? theme.success : theme.warning }}>
-          {appt.owner_confirmed_at ? 'Confirmed' : farrier ? 'Unconfirmed' : 'Please confirm'}
+          {appt.owner_confirmed_at
+            ? 'Confirmed'
+            : appt.owner_change_request
+              ? farrier
+                ? 'Owner wants to change'
+                : 'Change asked'
+              : farrier
+                ? 'Unconfirmed'
+                : 'Please confirm'}
         </ThemedText>
       </View>
       <ThemedText type="small" themeColor="textSecondary">

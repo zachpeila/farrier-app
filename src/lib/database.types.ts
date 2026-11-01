@@ -19,16 +19,19 @@ export type Database = {
           appointment_id: string
           horse_id: string
           planned_service_id: string | null
+          owner_note: string | null
         }
         Insert: {
           appointment_id: string
           horse_id: string
           planned_service_id?: string | null
+          owner_note?: string | null
         }
         Update: {
           appointment_id?: string
           horse_id?: string
           planned_service_id?: string | null
+          owner_note?: string | null
         }
         Relationships: [
           {
@@ -61,6 +64,8 @@ export type Database = {
           location_id: string | null
           notes: string | null
           owner_confirmed_at: string | null
+          owner_change_request: string | null
+          owner_change_requested_at: string | null
           planned_km: number | null
           provider_id: string
           request_id: string | null
@@ -76,6 +81,8 @@ export type Database = {
           location_id?: string | null
           notes?: string | null
           owner_confirmed_at?: string | null
+          owner_change_request?: string | null
+          owner_change_requested_at?: string | null
           planned_km?: number | null
           provider_id: string
           request_id?: string | null
@@ -91,6 +98,8 @@ export type Database = {
           location_id?: string | null
           notes?: string | null
           owner_confirmed_at?: string | null
+          owner_change_request?: string | null
+          owner_change_requested_at?: string | null
           planned_km?: number | null
           provider_id?: string
           request_id?: string | null
@@ -207,6 +216,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      client_messages: {
+        Row: {
+          appointment_id: string | null
+          channel: string
+          client_id: string
+          id: string
+          invoice_id: string | null
+          kind: string
+          provider_id: string
+          sent_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          channel: string
+          client_id: string
+          id?: string
+          invoice_id?: string | null
+          kind: string
+          provider_id: string
+          sent_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          channel?: string
+          client_id?: string
+          id?: string
+          invoice_id?: string | null
+          kind?: string
+          provider_id?: string
+          sent_at?: string
+        }
+        Relationships: []
       }
       clients: {
         Row: {
@@ -457,6 +499,8 @@ export type Database = {
           location_id: string | null
           name: string
           photo_path: string | null
+          vet_name: string | null
+          vet_phone: string | null
           shoe_status: Database["public"]["Enums"]["shoe_status"] | null
           updated_at: string
         }
@@ -472,6 +516,8 @@ export type Database = {
           location_id?: string | null
           name: string
           photo_path?: string | null
+          vet_name?: string | null
+          vet_phone?: string | null
           shoe_status?: Database["public"]["Enums"]["shoe_status"] | null
           updated_at?: string
         }
@@ -487,6 +533,8 @@ export type Database = {
           location_id?: string | null
           name?: string
           photo_path?: string | null
+          vet_name?: string | null
+          vet_phone?: string | null
           shoe_status?: Database["public"]["Enums"]["shoe_status"] | null
           updated_at?: string
         }
@@ -1038,6 +1086,33 @@ export type Database = {
           },
         ]
       }
+      public_links: {
+        Row: {
+          appointment_id: string | null
+          client_id: string
+          created_at: string
+          invoice_id: string | null
+          provider_id: string
+          token: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          client_id: string
+          created_at?: string
+          invoice_id?: string | null
+          provider_id: string
+          token?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          client_id?: string
+          created_at?: string
+          invoice_id?: string | null
+          provider_id?: string
+          token?: string
+        }
+        Relationships: []
+      }
       push_tokens: {
         Row: {
           created_at: string
@@ -1537,6 +1612,10 @@ export type Database = {
       can_see_horse: { Args: { h: string }; Returns: boolean }
       can_see_invoice: { Args: { i: string }; Returns: boolean }
       cancel_visit_request: { Args: { p_request: string }; Returns: undefined }
+      client_link: {
+        Args: { p_appointment?: string; p_client: string; p_invoice?: string }
+        Returns: string
+      }
       confirm_appointment: {
         Args: { p_appointment: string }
         Returns: undefined
@@ -1579,12 +1658,20 @@ export type Database = {
         Args: { h: string; vt: Database["public"]["Enums"]["visit_type"] }
         Returns: boolean
       }
+      request_appointment_change: {
+        Args: { p_appointment: string; p_message: string }
+        Returns: undefined
+      }
       respond_to_visit_request: {
         Args: {
           p_accept: boolean
           p_decline_reason?: string
           p_request: string
         }
+        Returns: undefined
+      }
+      set_appointment_horse_note: {
+        Args: { p_appointment: string; p_horse: string; p_note: string }
         Returns: undefined
       }
       set_shoeing_interval: {

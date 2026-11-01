@@ -90,7 +90,7 @@ export async function fetchDueList(userId: string) {
 export type DueItem = Awaited<ReturnType<typeof fetchDueList>>[number];
 
 const APPOINTMENT_SELECT = `*, locations(id, name, address),
-  appointment_horses(horse_id, horses(id, name)),
+  appointment_horses(horse_id, owner_note, horses(id, name)),
   profiles!appointments_provider_id_fkey(full_name, business_name, phone)`;
 
 /** Appointments from today on that the person can see: their own as farrier, or their horses' as owner. */

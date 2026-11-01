@@ -12,3 +12,8 @@ verify_jwt = false
 [functions.stripe-return]
 # A plain page people land on after Stripe.
 verify_jwt = false
+
+[functions.public-link]
+# Owners not on the app open this from a texted or emailed link; the
+# token in the request is the permission.
+verify_jwt = false

@@ -2,8 +2,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 
+import { TellOwners } from '@/components/tell-owners';
 import { ThemedText } from '@/components/themed-text';
-import { Button, Card, DateStepper, EmptyState, ErrorText, Loading, Screen } from '@/components/ui';
+import { Button, Card, DateStepper, EmptyState, ErrorText, Loading, Screen, Segmented } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { useQuery } from '@/hooks/use-query';
 import { useTheme } from '@/hooks/use-theme';
@@ -32,6 +33,8 @@ export default function DayRoute() {
   // Local order while saving, so the list doesn't jump back.
   const [order, setOrder] = useState<{ key: string; ids: string[] } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [lateFor, setLateFor] = useState<string | null>(null);
+  const [lateMinutes, setLateMinutes] = useState('30');
   const [error, setError] = useState<string | null>(null);
 
   const dayKey = toDateString(day);
@@ -160,8 +163,32 @@ export default function DayRoute() {
                     ↓ Later
                   </ThemedText>
                 </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setLateFor(lateFor === s.id ? null : s.id)}
+                  style={styles.reorderButton}>
+                  <ThemedText type="smallBold" style={{ color: theme.warning }}>
+                    Running late
+                  </ThemedText>
+                </Pressable>
               </View>
             </Card>
+            {lateFor === s.id ? (
+              <>
+                <Segmented
+                  label="About how late?"
+                  options={['15', '30', '45', '60', '90'].map((m) => ({ value: m, label: `${m} min` }))}
+                  value={lateMinutes}
+                  onChange={setLateMinutes}
+                />
+                <TellOwners
+                  key={lateMinutes}
+                  kind="late"
+                  target={{ appointmentId: s.id }}
+                  minutesLate={Number(lateMinutes)}
+                />
+              </>
+            ) : null}
           </View>
         );
       })}

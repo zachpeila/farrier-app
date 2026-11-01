@@ -1,6 +1,6 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Linking, View } from 'react-native';
 
 import { HorseNotes } from '@/components/horse-notes';
 import { ThemedText } from '@/components/themed-text';
@@ -156,6 +156,18 @@ export default function HorseScreen() {
         </>
       ) : null}
 
+      {horse.vet_name || horse.vet_phone ? (
+        <Card onPress={horse.vet_phone ? () => Linking.openURL(`tel:${horse.vet_phone}`) : undefined}>
+          <ThemedText type="small" themeColor="textSecondary">
+            Vet
+          </ThemedText>
+          <ThemedText style={{ fontWeight: 600 }}>
+            {[horse.vet_name, horse.vet_phone].filter(Boolean).join(' · ')}
+            {horse.vet_phone ? ' · Call' : ''}
+          </ThemedText>
+        </Card>
+      ) : null}
+
       <SectionTitle>History</SectionTitle>
       <VisitHistory horseId={id} visits={data.visits} />
 
@@ -231,6 +243,8 @@ function HorseDetailsForm({
   const [color, setColor] = useState(horse.color ?? '');
   const [discipline, setDiscipline] = useState(horse.discipline ?? '');
   const [foaled, setFoaled] = useState(horse.foaled_year ? String(horse.foaled_year) : '');
+  const [vetName, setVetName] = useState(horse.vet_name ?? '');
+  const [vetPhone, setVetPhone] = useState(horse.vet_phone ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -257,6 +271,8 @@ function HorseDetailsForm({
         color: color.trim() || null,
         discipline: discipline.trim() || null,
         foaled_year: year && Number.isFinite(year) ? year : null,
+        vet_name: vetName.trim() || null,
+        vet_phone: vetPhone.trim() || null,
       })
       .eq('id', horse.id);
     setBusy(false);
@@ -287,6 +303,14 @@ function HorseDetailsForm({
       <Field label="Color" value={color} onChangeText={setColor} />
       <Field label="Discipline" value={discipline} onChangeText={setDiscipline} placeholder="e.g. Hunter/jumper, trail" />
       <Field label="Year foaled" value={foaled} onChangeText={setFoaled} keyboardType="number-pad" maxLength={4} />
+      <Field label="Vet" value={vetName} onChangeText={setVetName} placeholder="e.g. Dr. Lee, Valley Equine" />
+      <Field
+        label="Vet's phone"
+        value={vetPhone}
+        onChangeText={setVetPhone}
+        keyboardType="phone-pad"
+        hint="So the farrier can reach the vet if something is wrong and you aren't there."
+      />
       <ErrorText>{error}</ErrorText>
       <Button title="Save details" onPress={save} loading={busy} disabled={!name.trim()} />
       <Button title="Archive horse" variant="secondary" onPress={archive} />
