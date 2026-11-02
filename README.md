@@ -100,6 +100,50 @@ in the client; Row Level Security in the database controls access.
   reminders. Every send is logged in `notifications`, which is also how
   repeats are avoided. Tapping a reminder opens the horse, visit or invoice.
 
+- **Finish stop:** `appointment/finish` lists each horse at the stop (log
+  any that aren't), makes a draft invoice per owner whose horses were
+  worked on (`src/lib/stop-invoices.ts`; the trip fee is split evenly
+  between them), marks the stop done, and books the next visit for the
+  same horses at the shortest shoeing interval. New visits start from the
+  horse's last visit; saved visits can be edited; photos carry a foot.
+- **Reaching owners not on the app:** every owner gets their own link
+  (`public_links`, made by `client_link()`), opening `/l/<token>` on the
+  website with no sign-in. There they confirm a visit, ask for another
+  time, leave a note per horse, or see and pay an invoice (print to PDF
+  from the browser). The `public-link` Edge Function serves it with the
+  service role and only shows that client's horses. Farriers send links
+  from the visit, invoice and day route screens: **Text** opens the
+  phone's Messages app (from the farrier's own number), **Email** calls
+  `notify-clients`, which emails through Resend and pushes to owners on
+  the app. `send-reminders` also emails non-app owners the day before a
+  visit and weekly for past-due invoices (logged in `client_messages`).
+  Email needs the secrets `RESEND_API_KEY` and `EMAIL_FROM`; without them
+  it is skipped. Owners on the app ask for a new time and leave notes with
+  `request_appointment_change` and `set_appointment_horse_note`.
+- **Getting started fast:** `client/quick` adds a client with their barn
+  and horses on one screen (or picks them from phone contacts), and
+  `client/import` takes pasted spreadsheet rows (name, phone, email,
+  horses split by `;`, barn, address); see `src/lib/quick-add.ts`.
+- **Invite links** point at `/join/<code>` on the website. Signed out, it
+  keeps the code and accepts it right after setup; it also offers to open
+  the installed app.
+- **Schedule** has a week view with past and cancelled visits too. Long
+  option lists (barns, arrival times) show as a dropdown with search.
+- **Find a farrier:** farriers opt in under Account > Get found by owners
+  near you (`settings/listing`: home base rounded to about 1 km, travel
+  radius, services, experience, optional starting price). Owners search
+  from a barn, their location or a town (`find`, `find_farriers()`), and
+  ask to become a client (`client_requests`, `request_farrier()`). The
+  farrier accepts on the Schedule tab (`respond_client_request()`), which
+  links them to the horse and adds the owner as a client.
+- **Account deletion:** Account > Delete my account calls the
+  `delete-account` Edge Function, which removes the person's visit photos,
+  invoices and payments (these don't cascade), then the auth user; the
+  rest cascades from `profiles`. App stores require this.
+- **Privacy policy and terms:** `src/lib/legal.ts`, shown at
+  `/legal/privacy` and `/legal/terms` without signing in. Draft; set
+  `OPERATOR` and `CONTACT_EMAIL` before launch.
+
 ## MVP build order
 
 1. Horses, barns, clients, owner invite ✅

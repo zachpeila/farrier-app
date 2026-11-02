@@ -4,7 +4,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { OutboxBanner } from '@/components/outbox-banner';
 import { ThemedText } from '@/components/themed-text';
-import { Button, Card, EmptyState, ErrorText, Loading, Screen, SectionTitle } from '@/components/ui';
+import { WeekView } from '@/components/week-view';
+import { Button, Card, EmptyState, ErrorText, Loading, Screen, SectionTitle, Segmented } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { useQuery } from '@/hooks/use-query';
 import { useTheme } from '@/hooks/use-theme';
@@ -18,6 +19,7 @@ import {
 } from '@/lib/queries';
 import { formatDay, formatWindow, toDateString } from '@/lib/schedule';
 import { errorMessage, supabase } from '@/lib/supabase';
+import { confirmAction } from '@/lib/confirm';
 
 /**
  * Farrier: open visit requests, then upcoming stops by day.
@@ -27,9 +29,14 @@ export default function Schedule() {
   const { session, mode } = useAuth();
   const userId = session!.user.id;
   const farrier = mode === 'farrier';
+  const [view, setView] = useState<'list' | 'week'>('list');
   const { data, error, loading, refetch } = useQuery(async () => {
-    const [appointments, requests] = await Promise.all([fetchUpcomingAppointments(), fetchOpenRequests()]);
-    return { appointments, requests };
+    const [appointments, requests, newClients] = await Promise.all([
+      fetchUpcomingAppointments(),
+      fetchOpenRequests(),
+      farrier ? supabase.rpc('incoming_client_requests') : Promise.resolve({ data: [] }),
+    ]);
+    return { appointments, requests, newClients: newClients.data ?? [] };
   }, userId);
 
   if (loading && !data) return <Loading />;
@@ -55,10 +62,28 @@ export default function Schedule() {
       ) : (
         <Button title="Request a visit" onPress={() => router.push('/request/new')} />
       )}
+      <Segmented
+        options={[
+          { value: 'list', label: 'Coming up' },
+          { value: 'week', label: 'Week' },
+        ]}
+        value={view}
+        onChange={setView}
+      />
       <ErrorText>{error}</ErrorText>
       <OutboxBanner />
+      {view === 'week' ? <WeekView userId={userId} farrier={farrier} /> : null}
 
-      {toHandle.length > 0 ? (
+      {view === 'list' && (data?.newClients.length ?? 0) > 0 ? (
+        <View style={styles.group}>
+          <SectionTitle>New client requests</SectionTitle>
+          {data!.newClients.map((r) => (
+            <ClientRequestCard key={r.id} request={r} onChanged={refetch} />
+          ))}
+        </View>
+      ) : null}
+
+      {view === 'list' && toHandle.length > 0 ? (
         <View style={styles.group}>
           <SectionTitle>{farrier ? 'Requests' : 'Your requests'}</SectionTitle>
           {toHandle.map((r) => (
@@ -73,7 +98,7 @@ export default function Schedule() {
         </View>
       ) : null}
 
-      {data && appointments.length === 0 && toHandle.length === 0 ? (
+      {view === 'list' && data && appointments.length === 0 && toHandle.length === 0 && data.newClients.length === 0 ? (
         <EmptyState
           title="Nothing scheduled"
           body={
@@ -84,7 +109,7 @@ export default function Schedule() {
         />
       ) : null}
 
-      {[...byDay].map(([day, items]) => (
+      {(view === 'list' ? [...byDay] : []).map(([day, items]) => (
         <View key={day} style={styles.group}>
           <View style={styles.row}>
             <SectionTitle>{day}</SectionTitle>
@@ -121,12 +146,65 @@ function AppointmentCard({ appt, farrier }: { appt: AppointmentItem; farrier: bo
       <View style={styles.row}>
         <ThemedText style={{ fontWeight: 600 }}>{formatWindow(appt.scheduled_start, appt.scheduled_end)}</ThemedText>
         <ThemedText type="smallBold" style={{ color: appt.owner_confirmed_at ? theme.success : theme.warning }}>
-          {appt.owner_confirmed_at ? 'Confirmed' : farrier ? 'Unconfirmed' : 'Please confirm'}
+          {appt.owner_confirmed_at
+            ? 'Confirmed'
+            : appt.owner_change_request
+              ? farrier
+                ? 'Owner wants to change'
+                : 'Change asked'
+              : farrier
+                ? 'Unconfirmed'
+                : 'Please confirm'}
         </ThemedText>
       </View>
       <ThemedText type="small" themeColor="textSecondary">
         {[who, horses.join(', ')].filter(Boolean).join(' · ')}
       </ThemedText>
+    </Card>
+  );
+}
+
+type ClientRequest = {
+  id: string;
+  owner_name: string;
+  owner_phone: string | null;
+  horse_id: string;
+  horse_name: string;
+  barn_name: string | null;
+  barn_address: string | null;
+  message: string | null;
+};
+
+/** An owner who found the farrier in Find a farrier and asked to become a client. */
+function ClientRequestCard({ request, onChanged }: { request: ClientRequest; onChanged: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function respond(accept: boolean) {
+    if (!accept && !(await confirmAction({ title: `Decline ${request.owner_name}?`, confirmLabel: 'Decline' }))) return;
+    setBusy(true);
+    setError(null);
+    const { data, error } = await supabase.rpc('respond_client_request', { p_request: request.id, p_accept: accept });
+    setBusy(false);
+    if (error) setError(errorMessage(error));
+    else if (accept) router.push({ pathname: '/horse/[id]', params: { id: data } });
+    else onChanged();
+  }
+
+  return (
+    <Card>
+      <ThemedText style={{ fontWeight: 600 }}>
+        {request.owner_name} · {request.horse_name}
+      </ThemedText>
+      <ThemedText type="small" themeColor="textSecondary">
+        {[request.barn_name, request.barn_address, request.owner_phone].filter(Boolean).join(' · ') || 'No barn set yet'}
+      </ThemedText>
+      {request.message ? <ThemedText type="small">{request.message}</ThemedText> : null}
+      <ErrorText>{error}</ErrorText>
+      <View style={styles.actions}>
+        <Button title="Accept as a client" loading={busy} onPress={() => respond(true)} />
+        <Button title="Decline" variant="secondary" onPress={() => respond(false)} />
+      </View>
     </Card>
   );
 }
@@ -196,9 +274,10 @@ function RequestCard({
                 title="Decline"
                 variant="secondary"
                 loading={busy}
-                onPress={() =>
-                  run(() => supabase.rpc('respond_to_visit_request', { p_request: request.id, p_accept: false }))
-                }
+                onPress={async () => {
+                  if (await confirmAction({ title: 'Decline this request?', confirmLabel: 'Decline' }))
+                    run(() => supabase.rpc('respond_to_visit_request', { p_request: request.id, p_accept: false }));
+                }}
               />
             ) : null}
           </>
@@ -207,7 +286,10 @@ function RequestCard({
             title="Cancel request"
             variant="secondary"
             loading={busy}
-            onPress={() => run(() => supabase.rpc('cancel_visit_request', { p_request: request.id }))}
+            onPress={async () => {
+              if (await confirmAction({ title: 'Cancel this request?', confirmLabel: 'Cancel request' }))
+                run(() => supabase.rpc('cancel_visit_request', { p_request: request.id }));
+            }}
           />
         )}
       </View>

@@ -16,10 +16,14 @@ export default function Clients() {
 
   return (
     <Screen>
-      <Button title="Add a client" onPress={() => router.push({ pathname: '/client/[id]', params: { id: 'new' } })} />
+      <Button title="Add a client and their horses" onPress={() => router.push('/client/quick')} />
       <ErrorText>{error}</ErrorText>
       {data && data.length === 0 ? (
-        <EmptyState title="No clients yet" body="Clients are the owners you shoe for and send invoices to." />
+        <EmptyState
+          title="No clients yet"
+          body="Clients are the owners you shoe for and send invoices to. Add one with their barn and horses, or bring in your whole list at once."
+          action={<Button title="Import from a spreadsheet" variant="secondary" onPress={() => router.push('/client/import')} />}
+        />
       ) : null}
       <View style={{ gap: 8 }}>
         {data?.map((c) => (

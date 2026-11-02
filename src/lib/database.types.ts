@@ -18,16 +18,19 @@ export type Database = {
         Row: {
           appointment_id: string
           horse_id: string
+          owner_note: string | null
           planned_service_id: string | null
         }
         Insert: {
           appointment_id: string
           horse_id: string
+          owner_note?: string | null
           planned_service_id?: string | null
         }
         Update: {
           appointment_id?: string
           horse_id?: string
+          owner_note?: string | null
           planned_service_id?: string | null
         }
         Relationships: [
@@ -60,6 +63,8 @@ export type Database = {
           id: string
           location_id: string | null
           notes: string | null
+          owner_change_request: string | null
+          owner_change_requested_at: string | null
           owner_confirmed_at: string | null
           planned_km: number | null
           provider_id: string
@@ -75,6 +80,8 @@ export type Database = {
           id?: string
           location_id?: string | null
           notes?: string | null
+          owner_change_request?: string | null
+          owner_change_requested_at?: string | null
           owner_confirmed_at?: string | null
           planned_km?: number | null
           provider_id: string
@@ -90,6 +97,8 @@ export type Database = {
           id?: string
           location_id?: string | null
           notes?: string | null
+          owner_change_request?: string | null
+          owner_change_requested_at?: string | null
           owner_confirmed_at?: string | null
           planned_km?: number | null
           provider_id?: string
@@ -172,6 +181,68 @@ export type Database = {
           },
         ]
       }
+      client_messages: {
+        Row: {
+          appointment_id: string | null
+          channel: string
+          client_id: string
+          id: string
+          invoice_id: string | null
+          kind: string
+          provider_id: string
+          sent_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          channel: string
+          client_id: string
+          id?: string
+          invoice_id?: string | null
+          kind: string
+          provider_id: string
+          sent_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          channel?: string
+          client_id?: string
+          id?: string
+          invoice_id?: string | null
+          kind?: string
+          provider_id?: string
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_messages_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_messages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_messages_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_messages_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_notes: {
         Row: {
           client_id: string
@@ -201,6 +272,61 @@ export type Database = {
           },
           {
             foreignKeyName: "client_notes_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_requests: {
+        Row: {
+          created_at: string
+          horse_id: string
+          id: string
+          message: string | null
+          owner_id: string
+          provider_id: string
+          responded_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          horse_id: string
+          id?: string
+          message?: string | null
+          owner_id: string
+          provider_id: string
+          responded_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          horse_id?: string
+          id?: string
+          message?: string | null
+          owner_id?: string
+          provider_id?: string
+          responded_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_requests_horse_id_fkey"
+            columns: ["horse_id"]
+            isOneToOne: false
+            referencedRelation: "horses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_requests_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_requests_provider_id_fkey"
             columns: ["provider_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -459,6 +585,8 @@ export type Database = {
           photo_path: string | null
           shoe_status: Database["public"]["Enums"]["shoe_status"] | null
           updated_at: string
+          vet_name: string | null
+          vet_phone: string | null
         }
         Insert: {
           archived_at?: string | null
@@ -474,6 +602,8 @@ export type Database = {
           photo_path?: string | null
           shoe_status?: Database["public"]["Enums"]["shoe_status"] | null
           updated_at?: string
+          vet_name?: string | null
+          vet_phone?: string | null
         }
         Update: {
           archived_at?: string | null
@@ -489,6 +619,8 @@ export type Database = {
           photo_path?: string | null
           shoe_status?: Database["public"]["Enums"]["shoe_status"] | null
           updated_at?: string
+          vet_name?: string | null
+          vet_phone?: string | null
         }
         Relationships: [
           {
@@ -869,8 +1001,13 @@ export type Database = {
       }
       profiles: {
         Row: {
+          accepting_clients: boolean
           avatar_path: string | null
+          base_latitude: number | null
+          base_longitude: number | null
+          bio: string | null
           business_name: string | null
+          certifications: string | null
           country: string
           created_at: string
           default_currency: string
@@ -878,19 +1015,29 @@ export type Database = {
           email: string | null
           full_name: string
           id: string
+          listed: boolean
           phone: string | null
           region: string | null
           service_area: string | null
+          services: string[]
+          show_prices: boolean
           stripe_account_id: string | null
           stripe_charges_enabled: boolean
           stripe_payouts_enabled: boolean
           timezone: string
+          travel_km: number | null
           trip_fee_cents: number
           updated_at: string
+          years_experience: number | null
         }
         Insert: {
+          accepting_clients?: boolean
           avatar_path?: string | null
+          base_latitude?: number | null
+          base_longitude?: number | null
+          bio?: string | null
           business_name?: string | null
+          certifications?: string | null
           country?: string
           created_at?: string
           default_currency?: string
@@ -898,19 +1045,29 @@ export type Database = {
           email?: string | null
           full_name?: string
           id: string
+          listed?: boolean
           phone?: string | null
           region?: string | null
           service_area?: string | null
+          services?: string[]
+          show_prices?: boolean
           stripe_account_id?: string | null
           stripe_charges_enabled?: boolean
           stripe_payouts_enabled?: boolean
           timezone?: string
+          travel_km?: number | null
           trip_fee_cents?: number
           updated_at?: string
+          years_experience?: number | null
         }
         Update: {
+          accepting_clients?: boolean
           avatar_path?: string | null
+          base_latitude?: number | null
+          base_longitude?: number | null
+          bio?: string | null
           business_name?: string | null
+          certifications?: string | null
           country?: string
           created_at?: string
           default_currency?: string
@@ -918,15 +1075,20 @@ export type Database = {
           email?: string | null
           full_name?: string
           id?: string
+          listed?: boolean
           phone?: string | null
           region?: string | null
           service_area?: string | null
+          services?: string[]
+          show_prices?: boolean
           stripe_account_id?: string | null
           stripe_charges_enabled?: boolean
           stripe_payouts_enabled?: boolean
           timezone?: string
+          travel_km?: number | null
           trip_fee_cents?: number
           updated_at?: string
+          years_experience?: number | null
         }
         Relationships: []
       }
@@ -1031,6 +1193,62 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "provider_services_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      public_links: {
+        Row: {
+          appointment_id: string | null
+          client_id: string
+          created_at: string
+          invoice_id: string | null
+          provider_id: string
+          token: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          client_id: string
+          created_at?: string
+          invoice_id?: string | null
+          provider_id: string
+          token?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          client_id?: string
+          created_at?: string
+          invoice_id?: string | null
+          provider_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_links_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "public_links_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "public_links_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "public_links_provider_id_fkey"
             columns: ["provider_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -1536,7 +1754,13 @@ export type Database = {
       can_see_appointment: { Args: { a: string }; Returns: boolean }
       can_see_horse: { Args: { h: string }; Returns: boolean }
       can_see_invoice: { Args: { i: string }; Returns: boolean }
+      cancel_client_request: { Args: { p_request: string }; Returns: undefined }
       cancel_visit_request: { Args: { p_request: string }; Returns: undefined }
+      check_cron_secret: { Args: { p_secret: string }; Returns: boolean }
+      client_link: {
+        Args: { p_appointment?: string; p_client: string; p_invoice?: string }
+        Returns: string
+      }
       confirm_appointment: {
         Args: { p_appointment: string }
         Returns: undefined
@@ -1562,6 +1786,25 @@ export type Database = {
         }
         Returns: undefined
       }
+      find_farriers: {
+        Args: { p_lat: number; p_lng: number }
+        Returns: {
+          accepting: boolean
+          already_mine: boolean
+          bio: string
+          certifications: string
+          currency: string
+          distance_km: number
+          id: string
+          name: string
+          price_from_cents: number
+          region: string
+          requested: boolean
+          service_area: string
+          services: string[]
+          years_experience: number
+        }[]
+      }
       find_people: {
         Args: { p_query: string }
         Returns: {
@@ -1572,12 +1815,52 @@ export type Database = {
           service_area: string
         }[]
       }
+      incoming_client_requests: {
+        Args: never
+        Returns: {
+          barn_address: string
+          barn_name: string
+          created_at: string
+          horse_id: string
+          horse_name: string
+          id: string
+          message: string
+          owner_name: string
+          owner_phone: string
+        }[]
+      }
       is_active_provider: { Args: { h: string }; Returns: boolean }
       is_horse_owner: { Args: { h: string }; Returns: boolean }
+      km_between: {
+        Args: { lat1: number; lat2: number; lng1: number; lng2: number }
+        Returns: number
+      }
       my_client_ids: { Args: never; Returns: string[] }
+      my_farrier_requests: {
+        Args: never
+        Returns: {
+          created_at: string
+          farrier_name: string
+          horse_name: string
+          id: string
+          status: string
+        }[]
+      }
       provider_can_see_visit_type: {
         Args: { h: string; vt: Database["public"]["Enums"]["visit_type"] }
         Returns: boolean
+      }
+      request_appointment_change: {
+        Args: { p_appointment: string; p_message: string }
+        Returns: undefined
+      }
+      request_farrier: {
+        Args: { p_horse: string; p_message: string; p_provider: string }
+        Returns: string
+      }
+      respond_client_request: {
+        Args: { p_accept: boolean; p_request: string }
+        Returns: string
       }
       respond_to_visit_request: {
         Args: {
@@ -1585,6 +1868,10 @@ export type Database = {
           p_decline_reason?: string
           p_request: string
         }
+        Returns: undefined
+      }
+      set_appointment_horse_note: {
+        Args: { p_appointment: string; p_horse: string; p_note: string }
         Returns: undefined
       }
       set_shoeing_interval: {

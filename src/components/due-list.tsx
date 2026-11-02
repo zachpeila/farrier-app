@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { OutboxBanner } from '@/components/outbox-banner';
 import { ThemedText } from '@/components/themed-text';
-import { Card, EmptyState, ErrorText, Loading, Screen, SectionTitle, Segmented } from '@/components/ui';
+import { Button, Card, EmptyState, ErrorText, Loading, Screen, SectionTitle, Segmented } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { useQuery } from '@/hooks/use-query';
 import { useTheme } from '@/hooks/use-theme';
@@ -64,7 +64,8 @@ export function DueList() {
       {data && data.length === 0 ? (
         <EmptyState
           title="Your due list is empty"
-          body="Add horses and set their shoeing interval. They'll show up here when they're coming due."
+          body="Add your clients and their horses with a shoeing interval. They'll show up here when they're coming due."
+          action={<Button title="Add your first client" onPress={() => router.push('/client/quick')} />}
         />
       ) : null}
       {data && data.length > 0 && groups.length === 0 ? (

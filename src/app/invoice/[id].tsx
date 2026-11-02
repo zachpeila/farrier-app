@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Share, StyleSheet, View } from 'react-native';
 
 import { draftLine, LineEditor, type DraftLine } from '@/components/line-editor';
+import { TellOwners } from '@/components/tell-owners';
 import { ThemedText } from '@/components/themed-text';
 import { Button, Card, ErrorText, Field, Loading, Screen, SectionTitle, Segmented } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
@@ -10,12 +11,14 @@ import { useQuery } from '@/hooks/use-query';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
 import { formatDate } from '@/lib/dates';
+import { PUBLIC_SITE } from '@/lib/client-messages';
 import { centsToInput, formatMoney, INVOICE_STATUS_LABELS as STATUS_LABELS, parseMoney } from '@/lib/money';
 import { payInvoiceByCard } from '@/lib/payments';
 import { fetchInvoice, type InvoiceDetail } from '@/lib/queries';
 import { addDays, toDateString } from '@/lib/schedule';
 import { errorMessage, supabase } from '@/lib/supabase';
 import { formatRate } from '@/lib/tax-presets';
+import { confirmAction } from '@/lib/confirm';
 
 type TaxLine = { name: string; rate_bp: number; tax_number: string | null; cents: number };
 
@@ -25,8 +28,8 @@ const METHODS = [
   { value: 'other', label: 'Other (e-transfer, Venmo…)' },
 ] as const;
 
-/** Text the farrier shares by text or email until card payment links arrive. */
-function invoiceText(inv: InvoiceDetail) {
+/** The invoice as plain text, with the client's link to view and pay it. */
+function invoiceText(inv: InvoiceDetail, link?: string) {
   const from = inv.profiles?.business_name || inv.profiles?.full_name || 'Your farrier';
   const taxes = (inv.tax_breakdown as TaxLine[]).filter((t) => t.cents > 0);
   return [
@@ -44,6 +47,7 @@ function invoiceText(inv: InvoiceDetail) {
     `Total: ${formatMoney(inv.total_cents, inv.currency)}`,
     inv.due_date ? `Due: ${formatDate(inv.due_date)}` : '',
     inv.notes ? `\n${inv.notes}` : '',
+    link ? `\nView and pay: ${link}` : '',
   ]
     .filter((s) => s !== '')
     .join('\n');
@@ -58,6 +62,7 @@ export default function InvoiceScreen() {
   const [paying, setPaying] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [justSent, setJustSent] = useState(false);
 
   if (loading && !inv) return <Loading />;
   if (!inv) return <Screen><ErrorText>{loadError ?? 'Invoice not found.'}</ErrorText></Screen>;
@@ -81,6 +86,15 @@ export default function InvoiceScreen() {
   }
 
   const takesCards = !!inv.profiles?.stripe_charges_enabled;
+
+  async function shareText() {
+    try {
+      const { data: token } = await supabase.rpc('client_link', { p_client: inv!.client_id, p_invoice: id });
+      await Share.share({ message: invoiceText(inv!, token ? `${PUBLIC_SITE}/l/${token}` : undefined) });
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  }
 
   async function payByCard() {
     setBusy(true);
@@ -126,10 +140,7 @@ export default function InvoiceScreen() {
             due_date: inv!.due_date ?? toDateString(addDays(new Date(), 14)),
           })
           .eq('id', id),
-      async () => {
-        const fresh = await fetchInvoice(id);
-        await Share.share({ message: invoiceText(fresh) });
-      },
+      () => setJustSent(true),
     );
   }
 
@@ -246,7 +257,10 @@ export default function InvoiceScreen() {
             title="Delete draft"
             variant="danger"
             loading={busy}
-            onPress={() => run(() => supabase.from('invoices').delete().eq('id', id), () => router.back())}
+            onPress={async () => {
+              if (await confirmAction({ title: 'Delete this draft invoice?', confirmLabel: 'Delete' }))
+                run(() => supabase.from('invoices').delete().eq('id', id), () => router.back());
+            }}
           />
         </>
       ) : null}
@@ -257,17 +271,25 @@ export default function InvoiceScreen() {
           {takesCards ? (
             <Button title="Take card payment now" variant="secondary" loading={busy} onPress={payByCard} />
           ) : null}
-          <Button
-            title="Share invoice again"
-            variant="secondary"
-            onPress={() => Share.share({ message: invoiceText(inv) })}
+          <TellOwners
+            kind="invoice"
+            target={{ invoiceId: id }}
+            title={justSent ? 'Invoice ready. Send it to the client' : 'Send the invoice again'}
           />
+          <Button title="Share another way" variant="secondary" onPress={shareText} />
           {inv.amount_paid_cents === 0 ? (
             <Button
               title="Void invoice"
               variant="secondary"
               loading={busy}
-              onPress={() => run(() => supabase.from('invoices').update({ status: 'void' }).eq('id', id))}
+              onPress={async () => {
+                const ok = await confirmAction({
+                  title: `Void invoice #${inv.invoice_number}?`,
+                  message: 'The client no longer owes it. This cannot be undone.',
+                  confirmLabel: 'Void invoice',
+                });
+                if (ok) run(() => supabase.from('invoices').update({ status: 'void' }).eq('id', id));
+              }}
             />
           ) : null}
         </>

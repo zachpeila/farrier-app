@@ -47,7 +47,8 @@ export default function NewRequest() {
       <Screen>
         <EmptyState
           title="No farrier to ask yet"
-          body="Invite your farrier from your horse's page first. Once they join, you can request visits here."
+          body="Invite your farrier from your horse's page, or find one near you. Once they're your farrier, you can request visits here."
+          action={<Button title="Find a farrier near you" variant="secondary" onPress={() => router.replace('/find')} />}
         />
       </Screen>
     );

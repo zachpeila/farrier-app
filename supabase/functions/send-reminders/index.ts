@@ -9,6 +9,8 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
+import { emailEnabled, emailHtml, formatWindow as longWindow, money, sendEmail, SITE } from '../_shared/email.ts';
+
 type Kind = 'due_soon' | 'appointment_proposed' | 'appointment_reminder' | 'invoice_unpaid';
 
 type Reminder = {
@@ -242,6 +244,105 @@ async function send(reminders: Reminder[]) {
   return { sent: delivered.length, messages: messages.length };
 }
 
+/**
+ * Owners who aren't on the app can't get push, so they get email: the day
+ * before a visit, and weekly for a past-due invoice. Logged in
+ * client_messages so each goes out once (or once a week).
+ */
+async function emailClients() {
+  if (!emailEnabled()) return { emailed: 0 };
+  const now = Date.now();
+  let emailed = 0;
+
+  async function link(providerId: string, clientId: string, ref: { appointment_id?: string; invoice_id?: string }) {
+    const col = ref.appointment_id ? 'appointment_id' : 'invoice_id';
+    const { data: found } = await db.from('public_links').select('token').eq('client_id', clientId).eq(col, ref.appointment_id ?? ref.invoice_id!).maybeSingle();
+    if (found) return `${SITE}/l/${found.token}`;
+    const created = await check(db.from('public_links').insert({ provider_id: providerId, client_id: clientId, ...ref }).select('token').single());
+    return `${SITE}/l/${(created as unknown as { token: string }).token}`;
+  }
+  async function already(clientId: string, kind: string, ref: { appointment_id?: string; invoice_id?: string }, sinceDays: number) {
+    let q = db.from('client_messages').select('id').eq('client_id', clientId).eq('kind', kind).eq('channel', 'email');
+    q = ref.appointment_id ? q.eq('appointment_id', ref.appointment_id) : q.eq('invoice_id', ref.invoice_id!);
+    if (sinceDays) q = q.gte('sent_at', new Date(now - sinceDays * DAY).toISOString());
+    const { data } = await q.limit(1);
+    return !!data?.length;
+  }
+
+  // The day before a visit.
+  const soon = await check(
+    db
+      .from('appointments')
+      .select('id, provider_id, scheduled_start, scheduled_end, profiles!appointments_provider_id_fkey(full_name, business_name, email, phone, timezone), appointment_horses(horse_id, horses(name))')
+      .eq('status', 'scheduled')
+      .gte('scheduled_start', new Date(now + 12 * 3_600_000).toISOString())
+      .lt('scheduled_start', new Date(now + 36 * 3_600_000).toISOString()),
+  );
+  for (const a of soon) {
+    const p = a.profiles as unknown as { full_name: string; business_name: string | null; email: string | null; phone: string | null; timezone: string };
+    const from = p.business_name || p.full_name;
+    const owners = await check(
+      db
+        .from('horse_owners')
+        .select('horse_id, clients!inner(id, full_name, email, linked_user_id, provider_id)')
+        .in('horse_id', a.appointment_horses.map((h) => h.horse_id))
+        .eq('clients.provider_id', a.provider_id),
+    );
+    const byClient = new Map<string, { name: string; email: string; horses: string[] }>();
+    for (const o of owners) {
+      const c = o.clients as unknown as { id: string; full_name: string; email: string | null; linked_user_id: string | null };
+      // Owners on the app get the push reminder instead.
+      if (!c.email || c.linked_user_id) continue;
+      const horse = (a.appointment_horses.find((h) => h.horse_id === o.horse_id)?.horses as unknown as { name: string } | null)?.name;
+      const e = byClient.get(c.id) ?? { name: c.full_name, email: c.email, horses: [] };
+      if (horse) e.horses.push(horse);
+      byClient.set(c.id, e);
+    }
+    for (const [clientId, c] of byClient) {
+      if (await already(clientId, 'visit_tomorrow', { appointment_id: a.id }, 0)) continue;
+      const url = await link(a.provider_id, clientId, { appointment_id: a.id });
+      await sendEmail(
+        c.email,
+        `Farrier visit tomorrow: ${longWindow(a.scheduled_start, a.scheduled_end, p.timezone)}`,
+        emailHtml(
+          [`Hi ${c.name.split(' ')[0]},`, `A reminder that ${from} is coming for ${c.horses.join(' and ') || 'your horses'} ${longWindow(a.scheduled_start, a.scheduled_end, p.timezone)}.`, p.phone ? `${from} · ${p.phone}` : from],
+          { label: 'See the visit', url },
+        ),
+        p.email,
+      );
+      await db.from('client_messages').insert({ provider_id: a.provider_id, client_id: clientId, kind: 'visit_tomorrow', channel: 'email', appointment_id: a.id });
+      emailed++;
+    }
+  }
+
+  // Past-due invoices, at most weekly.
+  const overdue = await check(
+    db
+      .from('invoices')
+      .select('id, provider_id, invoice_number, total_cents, amount_paid_cents, currency, client_id, clients(full_name, email, linked_user_id), profiles!invoices_provider_id_fkey(full_name, business_name, email)')
+      .in('status', ['sent', 'partially_paid'])
+      .lt('due_date', isoDate(new Date())),
+  );
+  for (const inv of overdue) {
+    const c = inv.clients as unknown as { full_name: string; email: string | null; linked_user_id: string | null } | null;
+    const p = inv.profiles as unknown as { full_name: string; business_name: string | null; email: string | null };
+    if (!c?.email || c.linked_user_id) continue;
+    if (await already(inv.client_id, 'invoice_overdue', { invoice_id: inv.id }, 7)) continue;
+    const url = await link(inv.provider_id, inv.client_id, { invoice_id: inv.id });
+    const owing = money((inv.total_cents ?? 0) - inv.amount_paid_cents, inv.currency);
+    const from = p.business_name || p.full_name;
+    await sendEmail(
+      c.email,
+      `Reminder: invoice #${inv.invoice_number} from ${from} (${owing})`,
+      emailHtml([`Hi ${c.full_name.split(' ')[0]},`, `Invoice #${inv.invoice_number} from ${from} still has ${owing} owing.`, from], { label: 'View and pay', url }),
+      p.email,
+    );
+    await db.from('client_messages').insert({ provider_id: inv.provider_id, client_id: inv.client_id, kind: 'invoice_overdue', channel: 'email', invoice_id: inv.id });
+    emailed++;
+  }
+  return { emailed };
+}
+
 Deno.serve(async (req) => {
   const { data: allowed } = await db.rpc('check_cron_secret', {
     p_secret: req.headers.get('x-cron-secret') ?? '',
@@ -249,7 +350,8 @@ Deno.serve(async (req) => {
   if (allowed !== true) return new Response('forbidden', { status: 403 });
   try {
     const result = await send(await unsent(await collect()));
-    return Response.json(result);
+    const email = await emailClients();
+    return Response.json({ ...result, ...email });
   } catch (e) {
     console.error(e);
     return Response.json({ error: String(e) }, { status: 500 });

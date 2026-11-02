@@ -1,12 +1,13 @@
 import { Image } from 'expo-image';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Card, ErrorText, Loading, Screen, SectionTitle } from '@/components/ui';
+import { Button, Card, ErrorText, Loading, Screen, SectionTitle } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { useQuery } from '@/hooks/use-query';
 import { useTheme } from '@/hooks/use-theme';
+import { useAuth } from '@/lib/auth';
 import { formatDate } from '@/lib/dates';
 import { listPending } from '@/lib/outbox';
 import { fetchVisit } from '@/lib/queries';
@@ -23,6 +24,8 @@ type FootRow = {
 };
 
 type VisitView = {
+  horseId: string;
+  providerId: string;
   date: string;
   workType: string | null;
   notes: string | null;
@@ -32,7 +35,7 @@ type VisitView = {
   by: string | null;
   flags: string[];
   feet: FootRow[];
-  photos: { id: string; url: string | null; label: string | null }[];
+  photos: { id: string; url: string | null; label: string | null; foot?: string | null }[];
   pending: boolean;
 };
 
@@ -41,6 +44,8 @@ async function loadVisit(id: string): Promise<VisitView | null> {
   const pending = (await listPending()).find((p) => p.visit.id === id);
   if (pending) {
     return {
+      horseId: pending.visit.horse_id,
+      providerId: pending.visit.provider_id,
       date: pending.visit.visit_date,
       workType: pending.visit.work_type ?? null,
       notes: pending.visit.notes ?? null,
@@ -50,13 +55,15 @@ async function loadVisit(id: string): Promise<VisitView | null> {
       by: null,
       flags: pending.flags.map((f) => f.flag_type),
       feet: pending.feet,
-      photos: pending.photos.map((p) => ({ id: p.id, url: p.localUri, label: p.label })),
+      photos: pending.photos.map((p) => ({ id: p.id, url: p.localUri, label: p.label, foot: p.foot })),
       pending: true,
     };
   }
   const v = await fetchVisit(id);
   if (!v) return null;
   return {
+    horseId: v.horse_id,
+    providerId: v.provider_id,
     date: v.visit_date,
     workType: v.work_type,
     notes: v.notes,
@@ -66,7 +73,7 @@ async function loadVisit(id: string): Promise<VisitView | null> {
     by: v.profiles?.business_name || v.profiles?.full_name || null,
     flags: v.visit_flags.map((f) => f.flag_type),
     feet: v.visit_feet,
-    photos: v.visit_photos.map((p) => ({ id: p.id, url: p.url, label: p.label })),
+    photos: v.visit_photos.map((p) => ({ id: p.id, url: p.url, label: p.label, foot: p.foot })),
     pending: false,
   };
 }
@@ -74,6 +81,7 @@ async function loadVisit(id: string): Promise<VisitView | null> {
 export default function VisitScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const theme = useTheme();
+  const { session } = useAuth();
   const { data: v, error, loading } = useQuery(() => loadVisit(id), id);
 
   if (loading && !v) return <Loading />;
@@ -143,9 +151,14 @@ export default function VisitScreen() {
               p.url ? (
                 <View key={p.id} style={styles.photoWrap}>
                   <Image source={{ uri: p.url }} style={styles.photo} contentFit="cover" />
-                  {p.label ? (
+                  {p.label || p.foot ? (
                     <ThemedText type="small" themeColor="textSecondary">
-                      {p.label === 'before' ? 'Before' : 'After'}
+                      {[
+                        FEET.find((f) => f.value === p.foot)?.label,
+                        p.label ? (p.label === 'before' ? 'Before' : 'After') : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </ThemedText>
                   ) : null}
                 </View>
@@ -153,6 +166,14 @@ export default function VisitScreen() {
             )}
           </View>
         </>
+      ) : null}
+
+      {v.providerId === session?.user.id ? (
+        <Button
+          title="Edit visit"
+          variant="secondary"
+          onPress={() => router.push({ pathname: '/visit/new', params: { horseId: v.horseId, editId: id } })}
+        />
       ) : null}
 
       <ThemedText type="small" themeColor="textSecondary">

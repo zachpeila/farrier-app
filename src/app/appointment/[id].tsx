@@ -2,11 +2,13 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Pressable, View } from 'react-native';
 
+import { TellOwners } from '@/components/tell-owners';
 import { ThemedText } from '@/components/themed-text';
-import { Button, Card, DateStepper, ErrorText, Loading, Screen, SectionTitle, Segmented } from '@/components/ui';
+import { Button, Card, DateStepper, ErrorText, Field, Loading, Screen, SectionTitle, Segmented } from '@/components/ui';
 import { useQuery } from '@/hooks/use-query';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth';
+import type { MessageKind } from '@/lib/client-messages';
 import { fetchAppointment } from '@/lib/queries';
 import {
   atMinutes,
@@ -19,12 +21,23 @@ import {
   WINDOW_STARTS,
 } from '@/lib/schedule';
 import { errorMessage, supabase } from '@/lib/supabase';
+import { confirmAction } from '@/lib/confirm';
 
 export default function AppointmentScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, notify } = useLocalSearchParams<{ id: string; notify?: MessageKind }>();
   const { session } = useAuth();
+  const [notice, setNotice] = useState<MessageKind | null>(notify ?? null);
+  const [asking, setAsking] = useState(false);
+  const [changeText, setChangeText] = useState('');
+  const [noteFor, setNoteFor] = useState<string | null>(null);
+  const [noteText, setNoteText] = useState('');
   const theme = useTheme();
   const { data: appt, error: loadError, loading, refetch } = useQuery(() => fetchAppointment(id), id);
+  // The farrier's private notes for each horse, so they're in front of them at the barn.
+  const { data: notes } = useQuery(async () => {
+    const { data } = await supabase.from('horse_notes').select('horse_id, notes').eq('provider_id', session!.user.id);
+    return new Map((data ?? []).map((n) => [n.horse_id, n.notes]));
+  }, `notes:${session!.user.id}`);
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +78,30 @@ export default function AppointmentScreen() {
         </ThemedText>
       </Card>
 
+      {appt.owner_change_request && !cancelled ? (
+        <Card>
+          <ThemedText type="smallBold" style={{ color: theme.warning }}>
+            {isFarrier ? 'Owner asked for a different time' : 'You asked for a different time'}
+          </ThemedText>
+          <ThemedText>{appt.owner_change_request}</ThemedText>
+        </Card>
+      ) : null}
+
+      {isFarrier && appt.status !== 'completed' ? (
+        <TellOwners
+          key={notice ?? 'default'}
+          kind={notice ?? (cancelled ? 'cancelled' : appt.owner_change_request ? 'changed' : 'booked')}
+          target={{ appointmentId: appt.id }}
+          title={
+            !notice && !cancelled && !appt.owner_confirmed_at
+              ? 'Ask the owners to confirm'
+              : !notice && !cancelled
+                ? 'Message the owners'
+                : undefined
+          }
+        />
+      ) : null}
+
       <SectionTitle>Where</SectionTitle>
       {appt.locations ? (
         <Card
@@ -89,6 +126,56 @@ export default function AppointmentScreen() {
         {appt.appointment_horses.map((ah) => (
           <Card key={ah.horse_id} onPress={() => router.push({ pathname: '/horse/[id]', params: { id: ah.horse_id } })}>
             <ThemedText style={{ fontWeight: 600 }}>{ah.horses?.name ?? 'Horse'}</ThemedText>
+            {ah.owner_note ? (
+              <ThemedText type="small">
+                {isFarrier ? 'Owner says: ' : 'Your note: '}
+                {ah.owner_note}
+              </ThemedText>
+            ) : null}
+            {!isFarrier && !cancelled && noteFor !== ah.horse_id ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  setNoteFor(ah.horse_id);
+                  setNoteText(ah.owner_note ?? '');
+                }}>
+                <ThemedText type="smallBold" themeColor="accent">
+                  {ah.owner_note ? 'Edit note for the farrier' : 'Add a note for the farrier'}
+                </ThemedText>
+              </Pressable>
+            ) : null}
+            {noteFor === ah.horse_id ? (
+              <View style={{ gap: 8, marginTop: 8 }}>
+                <Field
+                  label="Note for the farrier"
+                  value={noteText}
+                  onChangeText={setNoteText}
+                  multiline
+                  placeholder="e.g. Left front looks a bit off since Tuesday"
+                />
+                <Button
+                  title="Save note"
+                  loading={busy}
+                  onPress={() =>
+                    run(async () => {
+                      const res = await supabase.rpc('set_appointment_horse_note', {
+                        p_appointment: id,
+                        p_horse: ah.horse_id,
+                        p_note: noteText,
+                      });
+                      if (!res.error) setNoteFor(null);
+                      return res;
+                    })
+                  }
+                />
+                <Button title="Cancel" variant="secondary" onPress={() => setNoteFor(null)} />
+              </View>
+            ) : null}
+            {isFarrier && notes?.get(ah.horse_id) ? (
+              <ThemedText type="small" style={{ color: theme.warning }}>
+                {notes.get(ah.horse_id)}
+              </ThemedText>
+            ) : null}
             {isFarrier && !cancelled ? (
               <Pressable
                 accessibilityRole="button"
@@ -130,35 +217,66 @@ export default function AppointmentScreen() {
 
       <ErrorText>{error}</ErrorText>
 
-      {!isFarrier && !cancelled && !appt.owner_confirmed_at ? (
+      {!isFarrier && !cancelled && !appt.owner_confirmed_at && !asking ? (
         <Button
           title="Confirm this time"
           loading={busy}
           onPress={() => run(() => supabase.rpc('confirm_appointment', { p_appointment: id }))}
         />
       ) : null}
+      {!isFarrier && appt.status === 'scheduled' && !asking ? (
+        <Button title="Ask for a different time" variant="secondary" onPress={() => setAsking(true)} />
+      ) : null}
+      {!isFarrier && asking ? (
+        <>
+          <Field
+            label="What works better?"
+            value={changeText}
+            onChangeText={setChangeText}
+            multiline
+            placeholder="e.g. Any morning next week except Wednesday"
+          />
+          <Button
+            title="Send to farrier"
+            loading={busy}
+            disabled={!changeText.trim()}
+            onPress={() =>
+              run(async () => {
+                const res = await supabase.rpc('request_appointment_change', { p_appointment: id, p_message: changeText });
+                if (!res.error) setAsking(false);
+                return res;
+              })
+            }
+          />
+          <Button title="Never mind" variant="secondary" onPress={() => setAsking(false)} />
+        </>
+      ) : null}
 
       {isFarrier && !cancelled && !editing ? (
         <Button
-          title="Create invoice"
-          variant={appt.status === 'completed' ? 'primary' : 'secondary'}
-          onPress={() => router.push({ pathname: '/invoice/new', params: { appointmentId: appt.id } })}
+          title={appt.status === 'completed' ? 'Invoices and next visit' : 'Finish stop'}
+          onPress={() => router.push({ pathname: '/appointment/finish', params: { id: appt.id } })}
         />
       ) : null}
 
       {isFarrier && appt.status === 'scheduled' && !editing ? (
         <>
-          <Button
-            title="Mark visit done"
-            loading={busy}
-            onPress={() => run(() => supabase.from('appointments').update({ status: 'completed' }).eq('id', id))}
-          />
           <Button title="Change time" variant="secondary" onPress={() => setEditing(true)} />
           <Button
             title="Cancel visit"
             variant="danger"
             loading={busy}
-            onPress={() => run(() => supabase.from('appointments').update({ status: 'cancelled' }).eq('id', id))}
+            onPress={async () => {
+              const ok = await confirmAction({
+                title: 'Cancel this visit?',
+                message: 'It comes off your schedule and the owners\' schedule.',
+                confirmLabel: 'Cancel visit',
+              });
+              if (ok) {
+                await run(() => supabase.from('appointments').update({ status: 'cancelled' }).eq('id', id));
+                setNotice('cancelled');
+              }
+            }}
           />
         </>
       ) : null}
@@ -175,7 +293,10 @@ export default function AppointmentScreen() {
                 .from('appointments')
                 .update({ scheduled_start: s.toISOString(), scheduled_end: e.toISOString() })
                 .eq('id', id);
-              if (!res.error) setEditing(false);
+              if (!res.error) {
+                setEditing(false);
+                setNotice('changed');
+              }
               return res;
             })
           }

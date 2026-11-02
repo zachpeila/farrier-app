@@ -1,7 +1,8 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Linking, View } from 'react-native';
 
+import { HorseNotes } from '@/components/horse-notes';
 import { ThemedText } from '@/components/themed-text';
 import { Button, Card, ErrorText, Field, Loading, Screen, SectionTitle, Segmented } from '@/components/ui';
 import { useQuery } from '@/hooks/use-query';
@@ -13,6 +14,7 @@ import { fetchHorse, fetchHorseVisits, fetchMyBarns } from '@/lib/queries';
 import { FLAG_TYPES, label, WORK_TYPES } from '@/lib/visit-options';
 import { errorMessage, supabase } from '@/lib/supabase';
 import type { ShoeStatus } from '@/lib/types';
+import { confirmAction } from '@/lib/confirm';
 
 const NONE = 'none';
 
@@ -64,6 +66,8 @@ export default function HorseScreen() {
           </ThemedText>
         </Card>
       ) : null}
+
+      {myLink ? <HorseNotes horseId={id} userId={userId} /> : null}
 
       {myLink ? (
         <Segmented
@@ -125,10 +129,16 @@ export default function HorseScreen() {
           Invite {inv.token} sent to {inv.sent_to}, waiting for them to join.
         </ThemedText>
       ))}
+      {isOwner && mode === 'owner' && farriers.length === 0 ? (
+        <Button
+          title="Find a farrier near you"
+          onPress={() => router.push({ pathname: '/find', params: { horseId: id } })}
+        />
+      ) : null}
       {isOwner && mode === 'owner' ? (
         <Button
-          title={farriers.length ? 'Invite a different farrier' : 'Invite your farrier'}
-          variant={farriers.length ? 'secondary' : 'primary'}
+          title={farriers.length ? 'Invite a different farrier' : 'Invite the farrier you already have'}
+          variant="secondary"
           onPress={() => router.push({ pathname: '/horse/invite', params: { horseId: id } })}
         />
       ) : null}
@@ -150,6 +160,18 @@ export default function HorseScreen() {
             ) : null,
           )}
         </>
+      ) : null}
+
+      {horse.vet_name || horse.vet_phone ? (
+        <Card onPress={horse.vet_phone ? () => Linking.openURL(`tel:${horse.vet_phone}`) : undefined}>
+          <ThemedText type="small" themeColor="textSecondary">
+            Vet
+          </ThemedText>
+          <ThemedText style={{ fontWeight: 600 }}>
+            {[horse.vet_name, horse.vet_phone].filter(Boolean).join(' · ')}
+            {horse.vet_phone ? ' · Call' : ''}
+          </ThemedText>
+        </Card>
       ) : null}
 
       <SectionTitle>History</SectionTitle>
@@ -227,6 +249,8 @@ function HorseDetailsForm({
   const [color, setColor] = useState(horse.color ?? '');
   const [discipline, setDiscipline] = useState(horse.discipline ?? '');
   const [foaled, setFoaled] = useState(horse.foaled_year ? String(horse.foaled_year) : '');
+  const [vetName, setVetName] = useState(horse.vet_name ?? '');
+  const [vetPhone, setVetPhone] = useState(horse.vet_phone ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -253,6 +277,8 @@ function HorseDetailsForm({
         color: color.trim() || null,
         discipline: discipline.trim() || null,
         foaled_year: year && Number.isFinite(year) ? year : null,
+        vet_name: vetName.trim() || null,
+        vet_phone: vetPhone.trim() || null,
       })
       .eq('id', horse.id);
     setBusy(false);
@@ -261,6 +287,12 @@ function HorseDetailsForm({
   }
 
   async function archive() {
+    const ok = await confirmAction({
+      title: `Archive ${horse.name}?`,
+      message: 'The horse leaves your lists and due list. Its records are kept.',
+      confirmLabel: 'Archive',
+    });
+    if (!ok) return;
     setBusy(true);
     const { error } = await supabase.from('horses').update({ archived_at: new Date().toISOString() }).eq('id', horse.id);
     setBusy(false);
@@ -277,6 +309,14 @@ function HorseDetailsForm({
       <Field label="Color" value={color} onChangeText={setColor} />
       <Field label="Discipline" value={discipline} onChangeText={setDiscipline} placeholder="e.g. Hunter/jumper, trail" />
       <Field label="Year foaled" value={foaled} onChangeText={setFoaled} keyboardType="number-pad" maxLength={4} />
+      <Field label="Vet" value={vetName} onChangeText={setVetName} placeholder="e.g. Dr. Lee, Valley Equine" />
+      <Field
+        label="Vet's phone"
+        value={vetPhone}
+        onChangeText={setVetPhone}
+        keyboardType="phone-pad"
+        hint="So the farrier can reach the vet if something is wrong and you aren't there."
+      />
       <ErrorText>{error}</ErrorText>
       <Button title="Save details" onPress={save} loading={busy} disabled={!name.trim()} />
       <Button title="Archive horse" variant="secondary" onPress={archive} />

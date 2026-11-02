@@ -13,7 +13,13 @@ import { errorMessage, supabase } from './supabase';
  * makes each upload safe to retry.
  */
 
-export type PendingPhoto = { id: string; localUri: string; label: 'before' | 'after' };
+export type PendingPhoto = {
+  id: string;
+  localUri: string;
+  label: 'before' | 'after';
+  /** Which foot the photo shows; missing means the whole horse or all feet. */
+  foot?: 'LF' | 'RF' | 'LH' | 'RH' | null;
+};
 
 export type PendingVisit = {
   visit: Omit<TablesInsert<'visits'>, 'id' | 'season'> & { id: string };
@@ -21,6 +27,8 @@ export type PendingVisit = {
   flags: { id: string; flag_type: string; notes: string | null }[];
   photos: PendingPhoto[];
   savedAt: string;
+  /** Set when editing a saved visit: problems not in `flags` are removed on upload. */
+  replaceFlags?: boolean;
 };
 
 const KEY = 'outbox.visits.v1';
@@ -74,6 +82,12 @@ async function upload(item: PendingVisit) {
     const { error } = await supabase.from('visit_feet').upsert(item.feet, { onConflict: 'visit_id,foot' });
     if (error) throw error;
   }
+  if (item.replaceFlags) {
+    let del = supabase.from('visit_flags').delete().eq('visit_id', visit.id);
+    if (item.flags.length) del = del.not('id', 'in', `(${item.flags.map((f) => f.id).join(',')})`);
+    const { error } = await del;
+    if (error) throw error;
+  }
   if (item.flags.length) {
     const { error } = await supabase
       .from('visit_flags')
@@ -90,7 +104,10 @@ async function upload(item: PendingVisit) {
     if (uploadError && !/exists|duplicate/i.test(uploadError.message)) throw uploadError;
     const { error } = await supabase
       .from('visit_photos')
-      .upsert({ id: photo.id, visit_id: visit.id, storage_path: path, label: photo.label }, { onConflict: 'id' });
+      .upsert(
+        { id: photo.id, visit_id: visit.id, storage_path: path, label: photo.label, foot: photo.foot ?? null },
+        { onConflict: 'id' },
+      );
     if (error) throw error;
   }
 }

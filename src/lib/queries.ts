@@ -90,7 +90,7 @@ export async function fetchDueList(userId: string) {
 export type DueItem = Awaited<ReturnType<typeof fetchDueList>>[number];
 
 const APPOINTMENT_SELECT = `*, locations(id, name, address),
-  appointment_horses(horse_id, horses(id, name)),
+  appointment_horses(horse_id, owner_note, horses(id, name)),
   profiles!appointments_provider_id_fkey(full_name, business_name, phone)`;
 
 /** Appointments from today on that the person can see: their own as farrier, or their horses' as owner. */
@@ -107,6 +107,18 @@ export async function fetchUpcomingAppointments() {
   return data;
 }
 export type AppointmentItem = Awaited<ReturnType<typeof fetchUpcomingAppointments>>[number];
+
+/** Every visit (any status) starting in [from, to), for the week view. */
+export async function fetchAppointmentsBetween(from: Date, to: Date) {
+  const { data, error } = await supabase
+    .from('appointments')
+    .select(APPOINTMENT_SELECT)
+    .gte('scheduled_start', from.toISOString())
+    .lt('scheduled_start', to.toISOString())
+    .order('scheduled_start');
+  if (error) throw error;
+  return data;
+}
 
 export async function fetchAppointment(id: string) {
   const { data, error } = await supabase.from('appointments').select(APPOINTMENT_SELECT).eq('id', id).single();
