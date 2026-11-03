@@ -141,8 +141,8 @@ in the client; Row Level Security in the database controls access.
   invoices and payments (these don't cascade), then the auth user; the
   rest cascades from `profiles`. App stores require this.
 - **Privacy policy and terms:** `src/lib/legal.ts`, shown at
-  `/legal/privacy` and `/legal/terms` without signing in. Draft; set
-  `OPERATOR` and `CONTACT_EMAIL` before launch.
+  `/legal/privacy` and `/legal/terms` without signing in. Operated by
+  Caprock Resources LLC. Draft; have it reviewed before launch.
 
 ## MVP build order
 

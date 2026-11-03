@@ -5,10 +5,9 @@
  * DRAFT: written for the app as built. Have it reviewed before launch.
  */
 
-// TODO(launch): the business name and contact email to print on these pages.
-export const OPERATOR = 'Farrier App';
-export const CONTACT_EMAIL = 'TODO-contact-email';
-export const UPDATED = 'November 1, 2026';
+export const OPERATOR = 'Caprock Resources LLC';
+export const CONTACT_EMAIL = 'zachpeila@gmail.com';
+export const UPDATED = 'November 3, 2026';
 
 type Section = { heading: string; body: string[] };
 export type LegalDoc = { title: string; sections: Section[] };
