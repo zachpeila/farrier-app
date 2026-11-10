@@ -27,7 +27,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(null);
       return;
     }
-    const { data } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+    // Own profile comes through an RPC: some columns (home base, Stripe account)
+    // aren't readable on the profiles table, even for the owner.
+    const { data } = await supabase.rpc('get_my_profile').maybeSingle();
     setProfile(data);
   }, []);
 

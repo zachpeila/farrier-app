@@ -1751,6 +1751,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      can_request_provider: {
+        Args: { p_horse: string; p_provider: string }
+        Returns: boolean
+      }
       can_see_appointment: { Args: { a: string }; Returns: boolean }
       can_see_horse: { Args: { h: string }; Returns: boolean }
       can_see_invoice: { Args: { i: string }; Returns: boolean }
@@ -1814,6 +1818,45 @@ export type Database = {
           id: string
           service_area: string
         }[]
+      }
+      get_my_profile: {
+        Args: never
+        Returns: {
+          accepting_clients: boolean
+          avatar_path: string | null
+          base_latitude: number | null
+          base_longitude: number | null
+          bio: string | null
+          business_name: string | null
+          certifications: string | null
+          country: string
+          created_at: string
+          default_currency: string
+          distance_unit: string
+          email: string | null
+          full_name: string
+          id: string
+          listed: boolean
+          phone: string | null
+          region: string | null
+          service_area: string | null
+          services: string[]
+          show_prices: boolean
+          stripe_account_id: string | null
+          stripe_charges_enabled: boolean
+          stripe_payouts_enabled: boolean
+          timezone: string
+          travel_km: number | null
+          trip_fee_cents: number
+          updated_at: string
+          years_experience: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       incoming_client_requests: {
         Args: never
