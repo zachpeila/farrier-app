@@ -24,7 +24,7 @@ export async function sendEmail(to: string, subject: string, html: string, reply
   if (!res.ok) throw new Error(`email failed: ${res.status} ${await res.text()}`);
 }
 
-export const SITE = Deno.env.get('PUBLIC_SITE_URL') ?? 'https://farrier-app.vercel.app';
+export const SITE = Deno.env.get('PUBLIC_SITE_URL') ?? 'https://hammerandhoof.com';
 
 export function formatWindow(start: string, end: string | null, timeZone: string) {
   const opts: Intl.DateTimeFormatOptions = { timeZone, hour: 'numeric', minute: '2-digit' };

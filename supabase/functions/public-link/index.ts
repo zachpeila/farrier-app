@@ -8,7 +8,7 @@
 import { CheckoutError, invoiceCheckoutUrl } from '../_shared/checkout.ts';
 import { admin, cors, json } from '../_shared/stripe.ts';
 
-const SITE = Deno.env.get('PUBLIC_SITE_URL') ?? 'https://farrier-app.vercel.app';
+const SITE = Deno.env.get('PUBLIC_SITE_URL') ?? 'https://hammerandhoof.com';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type Link = { token: string; provider_id: string; client_id: string; appointment_id: string | null; invoice_id: string | null };

@@ -16,7 +16,7 @@ import { supabase } from './supabase';
 export type MessageKind = 'booked' | 'changed' | 'cancelled' | 'invoice' | 'late';
 export type Target = { appointmentId: string } | { invoiceId: string };
 
-export const PUBLIC_SITE = 'https://farrier-app.vercel.app';
+export const PUBLIC_SITE = 'https://hammerandhoof.com';
 
 type Recipient = { clientId: string; name: string; phone: string | null; message: string };
 
