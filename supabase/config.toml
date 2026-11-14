@@ -5,6 +5,10 @@ project_id = "bvtwxbcnswkzskyahdfs"
 # Called by pg_cron with a shared secret header, not a user's JWT.
 verify_jwt = false
 
+[functions.notify-request]
+# Called by a database trigger with the same shared secret header.
+verify_jwt = false
+
 [functions.stripe-webhook]
 # Stripe signs its requests; there's no user JWT.
 verify_jwt = false
